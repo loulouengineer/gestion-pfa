@@ -1,7 +1,7 @@
 spring.application.name=gestion-pfa
 spring.datasource.url=jdbc:mysql://localhost:3306/pfa_db
 spring.datasource.username=root
-spring.datasource.password=user
+spring.datasource.password=user            <----------------   7ot mot de passe mte3ek lehna
 
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 
