@@ -1,0 +1,90 @@
+
+-- À placer dans : src/main/resources/data.sql
+
+
+ HADHA YGENERI EL DATA MENGHIR KI TAAMEL RUN
+-- ═══════════════════════════════════════════════════════
+
+-- Désactiver les vérifications FK pendant l'insertion
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- ── Utilisateurs (table parente) ──────────────────────
+INSERT INTO utilisateur (id, nom, email, mot_de_passe, role) VALUES
+(1,  'Bouslimi Lotfi',    'admin@pfa.tn',      'admin123',    'ADMIN'),
+(2,  'Jaidi Faouzi',      'jaidi@pfa.tn',      'prof123',     'PROFESSEUR'),
+(3,  'Abidi Sonia',       'abidi@pfa.tn',      'prof123',     'PROFESSEUR'),
+(4,  'Ben Salah Maha',    'bensalah@pfa.tn',   'prof123',     'PROFESSEUR'),
+(5,  'Ben Ali Sami',      'benali@pfa.tn',      'etud123',    'ETUDIANT'),
+(6,  'Trabelsi Nour',     'trabelsi@pfa.tn',   'etud123',     'ETUDIANT'),
+(7,  'Mansouri Leila',    'mansouri@pfa.tn',   'etud123',     'ETUDIANT'),
+(8,  'Khediri Amine',     'khediri@pfa.tn',    'etud123',     'ETUDIANT'),
+(9,  'Gharbi Yassine',    'gharbi@pfa.tn',     'etud123',     'ETUDIANT'),
+(10, 'Ferchichi Ines',    'ferchichi@pfa.tn',  'etud123',     'ETUDIANT');
+
+-- ── Professeurs ───────────────────────────────────────
+INSERT INTO professeur (id, departement) VALUES
+(2, 'Informatique'),
+(3, 'Informatique'),
+(4, 'Réseaux');
+
+-- ── Étudiants ─────────────────────────────────────────
+INSERT INTO etudiant (id, matricule, moyenne) VALUES
+(5,  'ET2024001', 15.4),
+(6,  'ET2024002', 15.4),
+(7,  'ET2024003', 13.1),
+(8,  'ET2024004', 13.1),
+(9,  'ET2024005', 16.8),
+(10, 'ET2024006', 16.8);
+
+-- ── Sujets ────────────────────────────────────────────
+INSERT INTO sujet (id, titre, description, difficulte, disponible, professeur_id) VALUES
+(1, 'Système de recommandation IA',     'Système de recommandation basé sur TF-IDF et similarité cosinus', 3, true, 2),
+(2, 'Application mobile livraison',     'App Flutter pour suivi de livraisons en temps réel',              2, true, 4),
+(3, 'Plateforme e-learning Spring Boot','Plateforme web de cours en ligne avec Spring Boot et React',       3, true, 3),
+(4, 'Gestion de stock IoT',             'Système de gestion de stock avec capteurs IoT',                   4, true, 2),
+(5, 'Chatbot NLP entreprise',           'Chatbot intelligent pour support client avec NLP',                 4, true, 3),
+(6, 'Dashboard analytics temps réel',  'Tableau de bord analytique avec WebSocket et D3.js',              3, true, 4),
+(7, 'Système de vote électronique',     'Plateforme de vote sécurisée avec blockchain',                    5, true, 2),
+(8, 'Application RH Spring Boot',       'Gestion des ressources humaines avec Spring Boot',                2, true, 3);
+
+-- ── Binômes ───────────────────────────────────────────
+INSERT INTO binome (id, etudiant1_id, etudiant2_id, moyenne_binome) VALUES
+(1, 5, 6, 15.4),
+(2, 7, 8, 13.1),
+(3, 9, 10, 16.8);
+
+-- ── Choix des sujets (5 max par binôme) ──────────────
+INSERT INTO choix_sujet (id, binome_id, sujet_id, ordre) VALUES
+(1,  1, 1, 1),
+(2,  1, 3, 2),
+(3,  1, 5, 3),
+(4,  1, 7, 4),
+(5,  1, 4, 5),
+(6,  2, 2, 1),
+(7,  2, 6, 2),
+(8,  2, 8, 3),
+(9,  2, 1, 4),
+(10, 2, 3, 5),
+(11, 3, 3, 1),
+(12, 3, 1, 2),
+(13, 3, 5, 3),
+(14, 3, 7, 4),
+(15, 3, 4, 5);
+
+-- ── Affectations (résultat du moteur) ────────────────
+INSERT INTO affectation (id, binome_id, sujet_id, score, statut, verrouillee) VALUES
+(1, 1, 1, 87.3, 'EN_ATTENTE', false),
+(2, 2, 2, 71.0, 'EN_ATTENTE', false),
+(3, 3, 3, 94.1, 'EN_ATTENTE', false);
+
+-- ── Créneaux de soutenance ────────────────────────────
+INSERT INTO creneau (id, date, heure_debut, heure_fin, duree_minutes, salle, statut) VALUES
+(1, '2026-04-28', '08:00:00', '08:30:00', 30, 'Salle A1', 'DISPONIBLE'),
+(2, '2026-04-28', '08:30:00', '09:00:00', 30, 'Salle A1', 'DISPONIBLE'),
+(3, '2026-04-28', '09:00:00', '09:30:00', 30, 'Salle A1', 'DISPONIBLE'),
+(4, '2026-04-28', '08:00:00', '08:30:00', 30, 'Salle A2', 'DISPONIBLE'),
+(5, '2026-04-28', '08:30:00', '09:00:00', 30, 'Salle A2', 'DISPONIBLE'),
+(6, '2026-04-29', '10:00:00', '10:30:00', 30, 'Salle B1', 'DISPONIBLE'),
+(7, '2026-04-29', '10:30:00', '11:00:00', 30, 'Salle B1', 'DISPONIBLE');
+
+SET FOREIGN_KEY_CHECKS = 1;
