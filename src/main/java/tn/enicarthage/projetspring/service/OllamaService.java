@@ -1,0 +1,84 @@
+package tn.enicarthage.projetspring.service;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
+@Service
+public class OllamaService {
+
+    @Value("${ollama.url}")
+    private String ollamaUrl;
+
+    @Value("${ollama.model}")
+    private String model;
+
+    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public String genererRecommandation(String prompt) {
+        try {
+            String requestBody = objectMapper.writeValueAsString(
+                    new OllamaRequest(model, prompt, false)
+            );
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(ollamaUrl + "/api/generate"))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(
+                    request, HttpResponse.BodyHandlers.ofString()
+            );
+
+            String body = response.body();
+            System.out.println("Ollama response: " + body);
+
+            // Ollama peut retourner plusieurs lignes JSON
+            // On prend la dernière ligne complète
+            StringBuilder fullResponse = new StringBuilder();
+            String[] lines = body.split("\n");
+
+            for (String line : lines) {
+                if (line.trim().isEmpty()) continue;
+                try {
+                    JsonNode node = objectMapper.readTree(line);
+                    if (node.has("response")) {
+                        fullResponse.append(node.get("response").asText());
+                    }
+                    if (node.has("done") && node.get("done").asBoolean()) {
+                        break;
+                    }
+                } catch (Exception e) {
+                    continue;
+                }
+            }
+
+            String result = fullResponse.toString().trim();
+            return result.isEmpty() ? "Analyse IA non disponible" : result;
+
+        } catch (Exception e) {
+            System.err.println("Erreur Ollama: " + e.getMessage());
+            return "Analyse IA non disponible pour le moment";
+        }
+    }
+
+    static class OllamaRequest {
+        public String model;
+        public String prompt;
+        public boolean stream;
+
+        public OllamaRequest(String model, String prompt, boolean stream) {
+            this.model = model;
+            this.prompt = prompt;
+            this.stream = stream;
+        }
+    }
+}
