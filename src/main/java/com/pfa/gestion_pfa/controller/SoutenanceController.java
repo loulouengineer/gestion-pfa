@@ -1,139 +1,266 @@
 package com.pfa.gestion_pfa.controller;
 
-import com.pfa.gestion_pfa.model.Professeur;
-import com.pfa.gestion_pfa.model.Soutenance;
-import com.pfa.gestion_pfa.service.SoutenanceService;
+import com.pfa.gestion_pfa.model.*;
+import com.pfa.gestion_pfa.repository.*;
 import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * Contrôleur REST — Phase 3 & 4 : Planification et planning final.
- *
- * Base URL : /api/soutenances
- */
 @RestController
 @RequestMapping("/api/soutenances")
 @RequiredArgsConstructor
 public class SoutenanceController {
 
-    private final SoutenanceService soutenanceService;
+    private final SoutenanceRepository    soutenanceRepository;
+    private final CreneauRepository       creneauRepository;
+    private final AffectationRepository   affectationRepository;
+    private final ProfesseurRepository    professeurRepository;
+    private final NotificationRepository  notificationRepository;
 
-    // ══════════════════════════════════════════════════════
-    // PHASE 3 — Planification
-    // ══════════════════════════════════════════════════════
+    /** GET /api/soutenances */
+    @GetMapping
+    public ResponseEntity<List<Map<String, Object>>> getAll() {
+        return ResponseEntity.ok(
+                soutenanceRepository.findAllOrderByDateAndHeure()
+                        .stream().map(this::toMap).collect(Collectors.toList())
+        );
+    }
+
+    /** GET /api/soutenances/{id} */
+    @GetMapping("/{id}")
+    public ResponseEntity<Map<String, Object>> getById(@PathVariable Long id) {
+        return soutenanceRepository.findById(id)
+                .map(s -> ResponseEntity.ok(toMap(s)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /** GET /api/soutenances/prof/{profId} — soutenances où le prof est membre du jury */
+    @GetMapping("/prof/{profId}")
+    public ResponseEntity<List<Map<String, Object>>> getByProf(@PathVariable Long profId) {
+        return ResponseEntity.ok(
+                soutenanceRepository.findByJuryProfId(profId)
+                        .stream().map(this::toMap).collect(java.util.stream.Collectors.toList())
+        );
+    }
 
     /**
      * POST /api/soutenances/planifier
-     * Planifie une soutenance manuellement.
+     * Assigne UNIQUEMENT un binôme — jury vient du créneau.
+     * Envoie automatiquement une notification à chaque membre du jury.
      *
-     * Body :
-     * {
-     *   "affectationId": 1,
-     *   "creneauId": 5,
-     *   "juryIds": [2, 4, 7]
-     * }
-     *
-     * Vérifie avant planification :
-     *  - créneau disponible
-     *  - pas de conflit de salle
-     *  - pas de conflit de jury
-     *  - disponibilités des profs respectées
-     *  - encadrant dans le jury
+     * Body: { affectationId, creneauId }
      */
     @PostMapping("/planifier")
-    public ResponseEntity<Soutenance> planifier(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> planifier(@RequestBody Map<String, Object> body) {
         Long affectationId = Long.valueOf(body.get("affectationId").toString());
-        Long creneauId = Long.valueOf(body.get("creneauId").toString());
+        Long creneauId     = Long.valueOf(body.get("creneauId").toString());
 
-        @SuppressWarnings("unchecked")
-        List<Integer> juryIds = (List<Integer>) body.get("juryIds");
+        Affectation affectation = affectationRepository.findById(affectationId)
+                .orElseThrow(() -> new IllegalArgumentException("Affectation introuvable."));
 
-        List<Professeur> jury = juryIds.stream().map(id -> {
-            Professeur p = new Professeur();
-            p.setId(Long.valueOf(id));
-            return p;
-        }).collect(Collectors.toList());
+        Creneau creneau = creneauRepository.findById(creneauId)
+                .orElseThrow(() -> new IllegalArgumentException("Créneau introuvable."));
 
-        return ResponseEntity.ok(soutenanceService.planifier(affectationId, creneauId, jury));
+        // Vérifier que le créneau est valide (jury + salle)
+        List<Professeur> jury = professeurRepository.findByCreneauId(creneauId);
+        if (jury.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "erreur", "Ce créneau n'a pas de jury. Il ne peut pas être utilisé."
+            ));
+        }
+        if (creneau.getSalle() == null || creneau.getSalle().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "erreur", "Ce créneau n'a pas de salle."
+            ));
+        }
+
+        // Vérifier disponibilité du créneau
+        if (creneau.getStatut() != com.pfa.gestion_pfa.model.enums.StatutCreneau.DISPONIBLE) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "erreur", "Ce créneau est déjà occupé."
+            ));
+        }
+
+        // Vérifier que le binôme n'est pas déjà planifié
+        if (soutenanceRepository.existsByBinome(affectation.getBinome())) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "erreur", "Ce binôme a déjà une soutenance planifiée."
+            ));
+        }
+
+        // Créer la soutenance
+        Soutenance soutenance = new Soutenance();
+        soutenance.setBinome(affectation.getBinome());
+        soutenance.setAffectation(affectation);
+        soutenance.setCreneau(creneau);
+
+        creneau.setStatut(com.pfa.gestion_pfa.model.enums.StatutCreneau.OCCUPE);
+        creneauRepository.save(creneau);
+
+        Soutenance saved = soutenanceRepository.save(soutenance);
+
+        // ── AUTO-NOTIFICATION à chaque membre du jury ──────────────
+        String etudiant1 = affectation.getBinome().getEtudiant1().getNom();
+        String etudiant2 = affectation.getBinome().getEtudiant2().getNom();
+        String salle     = creneau.getSalle();
+        String date      = creneau.getDate().toString();
+        String heure     = creneau.getHeureDebut().toString();
+
+        for (Professeur prof : jury) {
+            Notification notif = new Notification();
+            notif.setDestinataire(prof);
+            notif.setTitre("Nouvelle soutenance planifiée");
+            notif.setMessage(String.format(
+                    "Vous êtes membre du jury pour la soutenance de %s & %s. " +
+                            "Date : %s à %s, Salle : %s.",
+                    etudiant1, etudiant2, date, heure, salle
+            ));
+            notif.setType(Notification.TypeNotification.INFO);
+            notif.setSoutenance(saved);
+            notif.setLien("/soutenances/" + saved.getId());
+            notificationRepository.save(notif);
+        }
+
+        return ResponseEntity.ok(toMap(saved));
     }
 
-    /**
-     * POST /api/soutenances/planifier-auto
-     * Lance la planification automatique de toutes les soutenances.
-     * Assigne chaque binôme validé au premier créneau sans conflit.
-     *
-     * Retour : liste des soutenances planifiées
-     */
+    /** POST /api/soutenances/planifier-auto */
     @PostMapping("/planifier-auto")
-    public ResponseEntity<List<Soutenance>> planifierAuto() {
-        return ResponseEntity.ok(soutenanceService.planifierAutomatiquement());
+    public ResponseEntity<List<Map<String, Object>>> planifierAuto() {
+        List<Affectation> validees = affectationRepository
+                .findByStatut(com.pfa.gestion_pfa.model.enums.StatutAffectation.VALIDEE);
+
+        // Seulement créneaux avec jury ET salle
+        List<Creneau> creneauxDispo = creneauRepository
+                .findByStatut(com.pfa.gestion_pfa.model.enums.StatutCreneau.DISPONIBLE)
+                .stream()
+                .filter(c -> {
+                    List<Professeur> j = professeurRepository.findByCreneauId(c.getId());
+                    return !j.isEmpty() && c.getSalle() != null && !c.getSalle().isBlank();
+                })
+                .collect(Collectors.toList());
+
+        List<Map<String, Object>> planifiees = new ArrayList<>();
+        Iterator<Creneau> iter = creneauxDispo.iterator();
+
+        for (Affectation affectation : validees) {
+            if (!iter.hasNext()) break;
+            if (soutenanceRepository.existsByBinome(affectation.getBinome())) continue;
+
+            Creneau creneau = iter.next();
+            List<Professeur> jury = professeurRepository.findByCreneauId(creneau.getId());
+
+            Soutenance s = new Soutenance();
+            s.setBinome(affectation.getBinome());
+            s.setAffectation(affectation);
+            s.setCreneau(creneau);
+
+            creneau.setStatut(com.pfa.gestion_pfa.model.enums.StatutCreneau.OCCUPE);
+            creneauRepository.save(creneau);
+            Soutenance saved = soutenanceRepository.save(s);
+
+            // Auto-notif
+            for (Professeur prof : jury) {
+                Notification notif = new Notification();
+                notif.setDestinataire(prof);
+                notif.setTitre("Nouvelle soutenance planifiée");
+                notif.setMessage(String.format(
+                        "Soutenance de %s & %s — %s à %s, %s.",
+                        affectation.getBinome().getEtudiant1().getNom(),
+                        affectation.getBinome().getEtudiant2().getNom(),
+                        creneau.getDate(), creneau.getHeureDebut(), creneau.getSalle()
+                ));
+                notif.setType(Notification.TypeNotification.INFO);
+                notif.setSoutenance(saved);
+                notificationRepository.save(notif);
+            }
+
+            planifiees.add(toMap(saved));
+        }
+
+        return ResponseEntity.ok(planifiees);
     }
 
-    // ══════════════════════════════════════════════════════
-    // PHASE 4 — Planning final
-    // ══════════════════════════════════════════════════════
-
-    /**
-     * GET /api/soutenances
-     * Retourne le planning complet de toutes les soutenances.
-     * Trié par date et heure de début.
-     * Accessible : ADMIN, PROFESSEUR, ETUDIANT
-     */
-    @GetMapping
-    public ResponseEntity<List<Soutenance>> getPlanningFinal() {
-        return ResponseEntity.ok(soutenanceService.getPlanningFinal());
-    }
-
-    /**
-     * GET /api/soutenances?date=2026-04-28
-     * Retourne les soutenances d'une date précise.
-     */
-    @GetMapping(params = "date")
-    public ResponseEntity<List<Soutenance>> getPlanningParDate(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return ResponseEntity.ok(soutenanceService.getPlanningParDate(date));
-    }
-
-    /**
-     * PUT /api/soutenances/{id}/resultat
-     * Enregistre le résultat d'une soutenance après qu'elle a eu lieu.
-     * Réservé au jury / admin.
-     *
-     * Body :
-     * {
-     *   "note": 14.5,
-     *   "observations": "Bon travail, présentation claire.",
-     *   "present": true
-     * }
-     */
+    /** PUT /api/soutenances/{id}/resultat */
     @PutMapping("/{id}/resultat")
-    public ResponseEntity<Soutenance> enregistrerResultat(
+    public ResponseEntity<?> enregistrerResultat(
             @PathVariable Long id,
             @RequestBody Map<String, Object> body) {
-        float note = Float.parseFloat(body.get("note").toString());
-        String observations = (String) body.get("observations");
-        boolean present = Boolean.parseBoolean(body.get("present").toString());
-        return ResponseEntity.ok(soutenanceService.enregistrerResultat(id, note, observations, present));
+
+        Soutenance s = soutenanceRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Soutenance introuvable."));
+
+        double note = Double.parseDouble(body.get("note").toString());
+        if (note < 0 || note > 20) return ResponseEntity.badRequest()
+                .body(Map.of("erreur", "Note invalide (0–20)."));
+
+        s.terminer((float) note,
+                (String) body.getOrDefault("observations", ""),
+                Boolean.parseBoolean(body.getOrDefault("present", "true").toString())
+        );
+
+        return ResponseEntity.ok(toMap(soutenanceRepository.save(s)));
     }
 
-    // ──────────────────────────────────────────────────────
-    // Gestion des erreurs métier
-    // ──────────────────────────────────────────────────────
-
-    @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<Map<String, String>> handleIllegalState(IllegalStateException ex) {
-        return ResponseEntity.badRequest().body(Map.of("erreur", ex.getMessage()));
+    /** DELETE /api/soutenances/{id} */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> annuler(@PathVariable Long id) {
+        soutenanceRepository.findById(id).ifPresent(s -> {
+            if (s.getCreneau() != null) {
+                s.getCreneau().setStatut(com.pfa.gestion_pfa.model.enums.StatutCreneau.DISPONIBLE);
+                creneauRepository.save(s.getCreneau());
+            }
+            soutenanceRepository.delete(s);
+        });
+        return ResponseEntity.ok().build();
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, String>> handleIllegalArg(IllegalArgumentException ex) {
-        return ResponseEntity.badRequest().body(Map.of("erreur", ex.getMessage()));
+    private Map<String, Object> toMap(Soutenance s) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("id",           s.getId());
+        map.put("statut",       s.getStatut().name());
+        map.put("note",         s.getNote());
+        map.put("observations", s.getObservations());
+        map.put("present",      s.getPresent());
+
+        if (s.getBinome() != null) {
+            map.put("binome", Map.of(
+                    "id",   s.getBinome().getId(),
+                    "etudiant1", Map.of("id", s.getBinome().getEtudiant1().getId(), "nom", s.getBinome().getEtudiant1().getNom()),
+                    "etudiant2", Map.of("id", s.getBinome().getEtudiant2().getId(), "nom", s.getBinome().getEtudiant2().getNom()),
+                    "moyenneBinome", (double) s.getBinome().getMoyenneBinome()
+            ));
+        }
+
+        if (s.getCreneau() != null) {
+            Creneau c = s.getCreneau();
+            List<Professeur> jury = professeurRepository.findByCreneauId(c.getId());
+            map.put("creneau", Map.of(
+                    "id",           c.getId(),
+                    "date",         c.getDate().toString(),
+                    "heureDebut",   c.getHeureDebut().toString(),
+                    "heureFin",     c.getHeureFin().toString(),
+                    "dureeMinutes", c.getDureeMinutes(),
+                    "salle",        c.getSalle() != null ? c.getSalle() : "",
+                    "jury", jury.stream().map(p -> Map.of(
+                            "id",          p.getId(),
+                            "nom",         p.getNom(),
+                            "departement", p.getDepartement() != null ? p.getDepartement() : ""
+                    )).collect(Collectors.toList())
+            ));
+        }
+
+        if (s.getAffectation() != null && s.getAffectation().getSujet() != null) {
+            map.put("sujet", Map.of(
+                    "titre",     s.getAffectation().getSujet().getTitre(),
+                    "encadrant", s.getAffectation().getSujet().getEncadrant() != null
+                            ? s.getAffectation().getSujet().getEncadrant().getNom() : ""
+            ));
+        }
+
+        return map;
     }
 }

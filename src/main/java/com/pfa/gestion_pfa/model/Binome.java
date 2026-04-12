@@ -20,7 +20,7 @@ public class Binome {
     @JoinColumn(name = "etudiant2_id")
     private Etudiant etudiant2;
 
-    private float moyenneBinome;
+    private Float moyenneBinome;
 
     public void calculerMoyenne() {
         this.moyenneBinome = (etudiant1.getMoyenne() + etudiant2.getMoyenne()) / 2;

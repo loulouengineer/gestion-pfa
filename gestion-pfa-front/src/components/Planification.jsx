@@ -1,276 +1,479 @@
-import { useState, useEffect, useCallback } from "react";
-import { soutenanceApi, creneauApi, professeurApi, affectationApi } from "../api/api";
-import StatsBar from "./StatsBar";
-import { Badge, STATUS_SOUTENANCE } from "./Badges";
+import { useState, useEffect, useCallback, useRef } from "react";
 
-const inputStyle = {
-  padding: "8px 12px", borderRadius: 8,
-  border: "1px solid var(--border2)", background: "var(--surface2)",
-  color: "var(--text)", outline: "none", fontSize: 13, width: "100%",
-};
+import { affectationApi, soutenanceApi, creneauApi, professeurApi } from "../api/api";
+import { StatBar, PageHeader, Card, Alert, EmptyState, LoadingSkeleton, Button, Badge } from "./ui";
+import { Layout, Zap, Users, MapPin, Clock, Calendar, CheckCircle, X, Info, Trash2 } from "lucide-react";
 
-function FieldWrap({ label, children }) {
+// ── Modal détail créneau/soutenance ───────────────────
+function ModalDetail({ data, onClose, onAnnuler, onResultat }) {
+  const [saving, setSaving]   = useState(false);
+  const [form, setForm]       = useState({ note: "", observations: "", present: true });
+  const [notifLoading, setNotifLoading] = useState("");
+  const [error, setError]     = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  if (!data) return null;
+
+  const isSoutenance = !!data.soutenance;
+  const creneau      = isSoutenance ? data.soutenance.creneau : data.creneau;
+  const soutenance   = isSoutenance ? data.soutenance : null;
+  const jury         = creneau?.jury || [];
+
+  const handleResultat = async () => {
+    const note = parseFloat(form.note);
+    if (isNaN(note) || note < 0 || note > 20) { setError("Note invalide (0–20)."); return; }
+    setSaving(true); setError(null);
+    try {
+      await soutenanceApi.enregistrerResultat(soutenance.id, { note, observations: form.observations, present: form.present });
+      setSuccess("Résultat enregistré.");
+      onResultat && onResultat();
+    } catch (e) { setError(e.message); }
+    finally { setSaving(false); }
+  };
+
+  const handleNotif = async (type) => {
+    setNotifLoading(type); setError(null);
+    try {
+      if (type === "debut") await soutenanceApi.notifierDebut(soutenance.id);
+      if (type === "fin")   await soutenanceApi.notifierFin(soutenance.id, "");
+      setSuccess("Notification envoyée au jury.");
+    } catch (e) { setError(e.message); }
+    finally { setNotifLoading(""); }
+  };
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-      <label style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-        {label}
-      </label>
-      {children}
+    <div onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.4)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3000, padding: 20 }}>
+      <div style={{
+        background: "var(--surface)", borderRadius: "var(--r-xl)",
+        border: "1px solid var(--border2)", boxShadow: "var(--shadow-xl)",
+        width: 520, maxHeight: "90vh", overflowY: "auto",
+        animation: "scaleIn 0.2s cubic-bezier(0.16,1,0.3,1)",
+      }}>
+        {/* Header */}
+        <div style={{
+          padding: "20px 24px", borderBottom: "1px solid var(--border)",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          background: isSoutenance ? "linear-gradient(135deg, var(--blue-50), #fff)" : "var(--surface2)",
+          borderRadius: "var(--r-xl) var(--r-xl) 0 0",
+        }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>
+              {isSoutenance
+                ? `${soutenance.binome?.etudiant1?.nom} & ${soutenance.binome?.etudiant2?.nom}`
+                : `Créneau — ${creneau?.salle}`
+              }
+            </div>
+            <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 3, display: "flex", gap: 10 }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <Calendar size={11} /> {creneau?.date}
+              </span>
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <Clock size={11} /> {creneau?.heureDebut} — {creneau?.heureFin}
+              </span>
+            </div>
+          </div>
+          <button onClick={onClose}
+            style={{ background: "var(--surface2)", border: "1px solid var(--border2)", borderRadius: "var(--r-md)", padding: "6px 10px", cursor: "pointer", color: "var(--text-3)" }}>
+            <X size={14} />
+          </button>
+        </div>
+
+        <div style={{ padding: "20px 24px" }}>
+          {error   && <Alert type="error"   message={error}   onClose={() => setError(null)}   />}
+          {success && <Alert type="success" message={success} onClose={() => setSuccess(null)} />}
+
+          {/* Salle */}
+          <InfoRow icon={MapPin}  label="Salle"    value={creneau?.salle || "—"} />
+          <InfoRow icon={Clock}   label="Durée"    value={`${creneau?.dureeMinutes || "—"} min`} />
+
+          {/* Sujet */}
+          {isSoutenance && soutenance.sujet && (
+            <InfoRow icon={Info} label="Sujet" value={soutenance.sujet.titre} />
+          )}
+
+          {/* Jury */}
+          <div style={{ marginTop: 16, marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8, display: "flex", alignItems: "center", gap: 5 }}>
+              <Users size={11} /> Jury ({jury.length})
+            </div>
+            {jury.length === 0 ? (
+              <div style={{ fontSize: 13, color: "var(--text-4)", fontStyle: "italic" }}>Aucun jury</div>
+            ) : (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {jury.map(j => (
+                  <span key={j.id} style={{
+                    padding: "4px 10px", borderRadius: 20, fontSize: 12, fontWeight: 500,
+                    background: "var(--blue-50)", color: "var(--blue-700)",
+                    border: "1px solid var(--blue-200)",
+                  }}>{j.nom}</span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Statut */}
+          {isSoutenance && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Statut</div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <Badge label={soutenance.statut} variant={
+                  soutenance.statut === "TERMINEE" ? "green" :
+                  soutenance.statut === "EN_COURS" ? "violet" : "blue"
+                } dot />
+                {soutenance.note !== null && (
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text-2)" }}>
+                    Note : {soutenance.note?.toFixed(2)} / 20
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Enregistrer résultat */}
+          {isSoutenance && soutenance.statut !== "TERMINEE" && (
+            <div style={{
+              background: "var(--surface2)", borderRadius: "var(--r-md)",
+              border: "1px solid var(--border)", padding: "14px 16px", marginBottom: 14,
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+                Enregistrer le résultat
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "100px 1fr auto", gap: 8, alignItems: "end" }}>
+                <div>
+                  <div style={{ fontSize: 10, color: "var(--text-4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Note</div>
+                  <input type="number" min="0" max="20" step="0.25" placeholder="0–20"
+                    value={form.note} onChange={e => setForm(p => ({ ...p, note: e.target.value }))}
+                    style={{ width: "100%", padding: "8px 10px", borderRadius: "var(--r-md)", border: "1px solid var(--border2)", background: "var(--surface)", fontSize: 14, fontWeight: 700, textAlign: "center", outline: "none" }}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: "var(--text-4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Observations</div>
+                  <input placeholder="Commentaire du jury..."
+                    value={form.observations} onChange={e => setForm(p => ({ ...p, observations: e.target.value }))}
+                    style={{ width: "100%", padding: "8px 10px", borderRadius: "var(--r-md)", border: "1px solid var(--border2)", background: "var(--surface)", fontSize: 13, outline: "none" }}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: "var(--text-4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Présence</div>
+                  <select value={form.present ? "oui" : "non"} onChange={e => setForm(p => ({ ...p, present: e.target.value === "oui" }))}
+                    style={{ padding: "8px 10px", borderRadius: "var(--r-md)", border: "1px solid var(--border2)", background: "var(--surface)", fontSize: 13, cursor: "pointer" }}>
+                    <option value="oui">Présent</option>
+                    <option value="non">Absent</option>
+                  </select>
+                </div>
+              </div>
+              <Button variant="primary" size="sm" icon={CheckCircle} onClick={handleResultat} disabled={saving} style={{ marginTop: 10 }}>
+                {saving ? "Enregistrement..." : "Enregistrer"}
+              </Button>
+            </div>
+          )}
+
+          {/* Notifications jury */}
+          {isSoutenance && (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <Button variant="secondary" size="sm"
+                disabled={notifLoading === "debut"}
+                onClick={() => handleNotif("debut")}>
+                {notifLoading === "debut" ? "..." : "Notifier — Début"}
+              </Button>
+              <Button variant="secondary" size="sm"
+                disabled={notifLoading === "fin"}
+                onClick={() => handleNotif("fin")}>
+                {notifLoading === "fin" ? "..." : "Notifier — Fin"}
+              </Button>
+              {onAnnuler && (
+                <Button variant="danger" size="sm" icon={Trash2}
+                  onClick={() => onAnnuler(soutenance.id)}>
+                  Annuler
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
-// ── Formulaire planification manuelle ────────────────
-function FormulaireManuel({ affectation, creneaux, profs, onPlanifie, onClose }) {
-  const [creneauId, setCreneauId]   = useState("");
-  const [juryIds, setJuryIds]       = useState([]);
-  const [loading, setLoading]       = useState(false);
-  const [error, setError]           = useState(null);
+function InfoRow({ icon: Icon, label, value }) {
+  return (
+    <div style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "7px 0", borderBottom: "1px solid var(--border)" }}>
+      <Icon size={13} color="var(--text-4)" style={{ marginTop: 2, flexShrink: 0 }} />
+      <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.06em", minWidth: 70, marginTop: 1 }}>{label}</span>
+      <span style={{ fontSize: 13, color: "var(--text-2)", fontWeight: 500 }}>{value}</span>
+    </div>
+  );
+}
 
-  const encadrantId = affectation?.sujet?.encadrant?.id;
+// ── Carte binôme draggable ────────────────────────────
+function BinomeCard({ affectation }) {
+  const nom1 = affectation.binome?.etudiant1?.nom || "";
+  const nom2 = affectation.binome?.etudiant2?.nom || "";
 
-  // L'encadrant est automatiquement dans le jury
-  useEffect(() => {
-    if (encadrantId) setJuryIds([String(encadrantId)]);
-  }, [encadrantId]);
-
-  const toggleJury = (id) => {
-    const sid = String(id);
-    if (sid === String(encadrantId)) return; // encadrant non retirable
-    setJuryIds(p => p.includes(sid) ? p.filter(x => x !== sid) : [...p, sid]);
+  const handleDragStart = (e) => {
+    e.dataTransfer.setData("affectation", JSON.stringify(affectation));
+    e.dataTransfer.effectAllowed = "move";
   };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!creneauId) { setError("Sélectionnez un créneau."); return; }
-    if (juryIds.length < 2) { setError("Le jury doit contenir au moins 2 membres."); return; }
-    setLoading(true); setError(null);
-    try {
-      await soutenanceApi.planifier({
-        affectationId: affectation.id,
-        creneauId: parseInt(creneauId),
-        juryIds: juryIds.map(Number),
-      });
-      onPlanifie();
-      onClose();
-    } catch (e) { setError(e.message); }
-    finally { setLoading(false); }
-  };
-
-  const creneauxDispo = creneaux.filter(c => c.statut === "DISPONIBLE");
 
   return (
-    <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
-      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
-    }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    <div
+      draggable
+      onDragStart={handleDragStart}
+      style={{
+        background: "var(--surface)", border: "1px solid var(--blue-200)",
+        borderLeft: "4px solid var(--blue-600)", borderRadius: "var(--r-md)",
+        padding: "10px 14px", marginBottom: 8, cursor: "grab",
+        userSelect: "none", boxShadow: "var(--shadow-xs)",
+        transition: "box-shadow 0.15s, transform 0.1s",
+      }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = "var(--shadow-blue)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = "var(--shadow-xs)"; e.currentTarget.style.transform = "none"; }}
     >
-      <div style={{
-        background: "var(--surface)", borderRadius: "var(--radius-lg)",
-        border: "1px solid var(--border2)", padding: "28px 32px",
-        width: 520, maxHeight: "85vh", overflowY: "auto",
-      }}>
-        <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
-          Planifier manuellement
-        </div>
-        <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 20 }}>
-          {affectation?.binome?.etudiant1?.nom} & {affectation?.binome?.etudiant2?.nom}
-          {" — "}{affectation?.sujet?.titre}
-        </div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--blue-700)", marginBottom: 2 }}>
+        {nom1} <span style={{ opacity: 0.5 }}>&</span> {nom2}
+      </div>
+      <div style={{ fontSize: 11, color: "var(--text-4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {affectation.sujet?.titre}
+      </div>
+      <div style={{ fontSize: 10, color: "var(--text-4)", marginTop: 4 }}>
+        ↕ Glisser vers un créneau vert
+      </div>
+    </div>
+  );
+}
 
-        {error && (
-          <div style={{ background: "#fee2e2", border: "1px solid #ef4444", color: "#991b1b", borderRadius: 8, padding: "10px 12px", fontSize: 13, marginBottom: 16, fontWeight: 500 }}>
-            {error}
+// ── Calendrier CSS custom (no overlap guaranteed) ────
+function CalendrierCustom({ creneaux, soutenances, onEventReceive, onEventClick, affectations }) {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const dragOverRef = useRef(null);
+
+  // Get Mon–Fri of current week
+  const getWeekDays = (base) => {
+    const d = new Date(base);
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return Array.from({ length: 5 }, (_, i) => {
+      const day = new Date(d);
+      day.setDate(d.getDate() + i);
+      return day;
+    });
+  };
+
+  const weekDays = getWeekDays(currentDate);
+  const SLOTS = ["08:00","08:30","09:00","09:30","10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30"];
+
+  const fmtDate = (d) => d.toISOString().split("T")[0];
+  const fmtDay  = (d) => d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" });
+  const fmtWeek = () => {
+    const opts = { day: "numeric", month: "long" };
+    return `${weekDays[0].toLocaleDateString("fr-FR", opts)} — ${weekDays[4].toLocaleDateString("fr-FR", opts)}`;
+  };
+
+  const prevWeek = () => { const d = new Date(currentDate); d.setDate(d.getDate() - 7); setCurrentDate(d); };
+  const nextWeek = () => { const d = new Date(currentDate); d.setDate(d.getDate() + 7); setCurrentDate(d); };
+  const goToday  = () => setCurrentDate(new Date());
+
+  // Get events for a given date+slot
+  const getEvents = (dateStr, slot) => {
+    const events = [];
+    // Available creneaux
+    creneaux.filter(c =>
+      c.statut === "DISPONIBLE" && c.date === dateStr &&
+      c.heureDebut.substring(0,5) === slot && c.jury?.length > 0 && c.salle
+    ).forEach(c => {
+      const juryNoms = c.jury.map(j => j.nom.split(" ").slice(-1)[0]).join(", ");
+      events.push({ type: "libre", id: c.id, title: c.salle, sub: juryNoms, creneau: c });
+    });
+    // Planned soutenances
+    soutenances.filter(s =>
+      s.creneau?.date === dateStr && s.creneau?.heureDebut?.substring(0,5) === slot
+    ).forEach(s => {
+      events.push({
+        type: "planifiee", id: s.id,
+        title: `${s.binome?.etudiant1?.nom?.split(" ").slice(-1)[0]} & ${s.binome?.etudiant2?.nom?.split(" ").slice(-1)[0]}`,
+        sub: s.creneau?.salle,
+        soutenance: s,
+      });
+    });
+    return events;
+  };
+
+  // Handle drop on a slot
+  const handleDrop = (e, dateStr, slot) => {
+    e.preventDefault();
+    dragOverRef.current = null;
+    const raw = e.dataTransfer.getData("affectation");
+    if (!raw) return;
+    const affectation = JSON.parse(raw);
+
+    const creneau = creneaux.find(c =>
+      c.statut === "DISPONIBLE" && c.date === dateStr &&
+      c.heureDebut.substring(0,5) === slot &&
+      c.jury?.length > 0 && c.salle
+    );
+    if (!creneau) return;
+    onEventReceive({ affectation, creneau });
+  };
+
+  const handleDragOver = (e, key) => {
+    e.preventDefault();
+    dragOverRef.current = key;
+  };
+
+  const today = fmtDate(new Date());
+
+  return (
+    <div style={{ background: "var(--surface)", border: "1px solid var(--border2)", borderRadius: "var(--r-xl)", overflow: "hidden", boxShadow: "var(--shadow-sm)" }}>
+      {/* Toolbar */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid var(--border)", background: "var(--surface2)" }}>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button onClick={prevWeek} style={{ padding: "5px 10px", borderRadius: "var(--r-sm)", border: "1px solid var(--border2)", background: "var(--surface)", cursor: "pointer", display: "flex", alignItems: "center" }}>
+            <span style={{ fontSize: 12, color: "var(--text-3)" }}>‹</span>
+          </button>
+          <button onClick={goToday} style={{ padding: "5px 12px", borderRadius: "var(--r-sm)", border: "1px solid var(--border2)", background: "var(--surface)", cursor: "pointer", fontSize: 12, color: "var(--text-2)", fontWeight: 600 }}>
+            Aujourd'hui
+          </button>
+          <button onClick={nextWeek} style={{ padding: "5px 10px", borderRadius: "var(--r-sm)", border: "1px solid var(--border2)", background: "var(--surface)", cursor: "pointer", display: "flex", alignItems: "center" }}>
+            <span style={{ fontSize: 12, color: "var(--text-3)" }}>›</span>
+          </button>
+        </div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>{fmtWeek()}</div>
+        <div style={{ display: "flex", gap: 14 }}>
+          {[
+            { bg: "#d1fae5", border: "#10b981", label: "Disponible" },
+            { bg: "#dbeafe", border: "#3b82f6", label: "Planifiée" },
+          ].map(l => (
+            <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <div style={{ width: 10, height: 10, borderRadius: 3, background: l.bg, border: `1.5px solid ${l.border}` }} />
+              <span style={{ fontSize: 11, color: "var(--text-3)" }}>{l.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Grid */}
+      <div style={{ overflowX: "auto" }}>
+        <div style={{ minWidth: 700 }}>
+          {/* Day headers */}
+          <div style={{ display: "grid", gridTemplateColumns: "64px repeat(5, 1fr)", borderBottom: "1px solid var(--border)" }}>
+            <div style={{ borderRight: "1px solid var(--border)" }} />
+            {weekDays.map((d, i) => {
+              const isToday = fmtDate(d) === today;
+              return (
+                <div key={i} style={{
+                  padding: "10px 4px", textAlign: "center",
+                  borderRight: i < 4 ? "1px solid var(--border)" : "none",
+                  background: isToday ? "var(--blue-50)" : "transparent",
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: isToday ? "var(--blue-600)" : "var(--text-3)", textTransform: "capitalize" }}>
+                    {fmtDay(d)}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        )}
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-
-          {/* Créneau */}
-          <FieldWrap label="Créneau disponible">
-            <select value={creneauId} onChange={e => setCreneauId(e.target.value)} style={inputStyle}>
-              <option value="">-- Sélectionner un créneau --</option>
-              {creneauxDispo.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.date} · {c.heureDebut} — {c.heureFin} · {c.salle}
-                </option>
-              ))}
-            </select>
-            {creneauxDispo.length === 0 && (
-              <div style={{ fontSize: 11, color: "#ef4444", marginTop: 4 }}>
-                Aucun créneau disponible. Ajoutez-en dans la Phase 2.
+          {/* Time rows */}
+          {SLOTS.map((slot, si) => (
+            <div key={slot} style={{
+              display: "grid", gridTemplateColumns: "64px repeat(5, 1fr)",
+              borderBottom: si < SLOTS.length - 1 ? "1px solid var(--border)" : "none",
+              minHeight: 52,
+            }}>
+              {/* Time label */}
+              <div style={{
+                padding: "6px 8px 0 0", textAlign: "right",
+                fontSize: 10, color: "var(--text-4)", fontFamily: "'JetBrains Mono', monospace",
+                borderRight: "1px solid var(--border)", flexShrink: 0, paddingTop: 10,
+              }}>
+                {slot}
               </div>
-            )}
-          </FieldWrap>
 
-          {/* Jury */}
-          <FieldWrap label={`Jury (${juryIds.length} sélectionné${juryIds.length > 1 ? "s" : ""})`}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {profs.map(p => {
-                const isEncadrant = String(p.id) === String(encadrantId);
-                const isSelected  = juryIds.includes(String(p.id));
+              {/* Day cells */}
+              {weekDays.map((d, di) => {
+                const dateStr = fmtDate(d);
+                const events  = getEvents(dateStr, slot);
+                const isToday = dateStr === today;
+                const dropKey = `${dateStr}-${slot}`;
+                const hasDropTarget = creneaux.some(c =>
+                  c.statut === "DISPONIBLE" && c.date === dateStr &&
+                  c.heureDebut.substring(0,5) === slot && c.jury?.length > 0
+                );
+
                 return (
-                  <div key={p.id}
-                    onClick={() => toggleJury(p.id)}
+                  <div key={di}
+                    onDragOver={hasDropTarget ? (e) => handleDragOver(e, dropKey) : undefined}
+                    onDrop={hasDropTarget ? (e) => handleDrop(e, dateStr, slot) : undefined}
+                    onDragLeave={() => { if (dragOverRef.current === dropKey) dragOverRef.current = null; }}
                     style={{
-                      display: "flex", alignItems: "center", justifyContent: "space-between",
-                      padding: "10px 14px", borderRadius: 8, cursor: isEncadrant ? "default" : "pointer",
-                      border: `1px solid ${isSelected ? "#3b82f6" : "var(--border2)"}`,
-                      background: isSelected ? "#dbeafe" : "var(--surface2)",
-                      transition: "all 0.15s",
+                      padding: "3px 4px",
+                      borderRight: di < 4 ? "1px solid var(--border)" : "none",
+                      background: isToday ? "rgba(59,130,246,0.02)" : "transparent",
+                      display: "flex", flexDirection: "column", gap: 3,
+                      minHeight: 52,
                     }}>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: isSelected ? 600 : 400, color: isSelected ? "#1e40af" : "var(--text)" }}>
-                        {p.nom}
+                    {/* Stack events vertically — one per row */}
+                    {events.map((ev, ei) => (
+                      <div key={ei}
+                        onClick={() => onEventClick(ev)}
+                        style={{
+                          padding: "4px 7px", borderRadius: "var(--r-sm)", cursor: "pointer",
+                          background: ev.type === "libre" ? "#d1fae5" : "#dbeafe",
+                          border: `1px solid ${ev.type === "libre" ? "#10b981" : "#3b82f6"}`,
+                          borderLeft: `3px solid ${ev.type === "libre" ? "#10b981" : "#3b82f6"}`,
+                          transition: "opacity 0.1s",
+                          flexShrink: 0,
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.opacity = "0.85"; }}
+                        onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
+                      >
+                        <div style={{ fontSize: 11, fontWeight: 700, color: ev.type === "libre" ? "#065f46" : "#1e40af", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {ev.title}
+                        </div>
+                        {ev.sub && (
+                          <div style={{ fontSize: 10, color: ev.type === "libre" ? "#10b981" : "#3b82f6", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 1 }}>
+                            {ev.sub}
+                          </div>
+                        )}
                       </div>
-                      <div style={{ fontSize: 11, color: "var(--muted)" }}>{p.departement}</div>
-                    </div>
-                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                      {isEncadrant && (
-                        <span style={{ fontSize: 10, background: "#dbeafe", color: "#1e40af", border: "1px solid #3b82f6", borderRadius: 20, padding: "2px 8px", fontWeight: 600 }}>
-                          Encadrant
-                        </span>
-                      )}
-                      <div style={{
-                        width: 18, height: 18, borderRadius: 4,
-                        border: `1.5px solid ${isSelected ? "#3b82f6" : "var(--border2)"}`,
-                        background: isSelected ? "#3b82f6" : "transparent",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                      }}>
-                        {isSelected && <span style={{ color: "#fff", fontSize: 11, fontWeight: 700 }}>✓</span>}
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 );
               })}
             </div>
-          </FieldWrap>
-
-          <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-            <button type="submit" disabled={loading}
-              style={{
-                flex: 1, padding: "10px", borderRadius: 8,
-                border: "none", background: "#3b82f6", color: "#fff",
-                fontSize: 13, fontWeight: 600, cursor: "pointer",
-                opacity: loading ? 0.6 : 1,
-              }}>
-              {loading ? "Planification..." : "Confirmer la planification"}
-            </button>
-            <button type="button" onClick={onClose}
-              style={{
-                padding: "10px 16px", borderRadius: 8,
-                border: "1px solid var(--border2)", background: "transparent",
-                color: "var(--muted)", fontSize: 13, cursor: "pointer",
-              }}>
-              Annuler
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-// ── Carte affectation à planifier ─────────────────────
-function AffectationCard({ affectation, onManuel }) {
-  return (
-    <div style={{
-      background: "var(--surface)", border: "1px solid var(--border2)",
-      borderLeft: "4px solid #f59e0b",
-      borderRadius: "var(--radius-lg)", padding: "18px 22px",
-      display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16,
-    }}>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 3 }}>
-          {affectation.binome?.etudiant1?.nom} & {affectation.binome?.etudiant2?.nom}
-        </div>
-        <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>
-          {affectation.sujet?.titre}
-        </div>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 11, color: "var(--muted)", fontFamily: "'DM Mono', monospace" }}>
-            Moy. {affectation.binome?.moyenneBinome?.toFixed(2)} / 20
-          </span>
-          <span style={{ fontSize: 11, color: "var(--muted)" }}>
-            Encadrant : {affectation.sujet?.encadrant?.nom}
-          </span>
+          ))}
         </div>
       </div>
-      <button onClick={() => onManuel(affectation)}
-        style={{
-          padding: "8px 16px", borderRadius: 8,
-          border: "1px solid #3b82f6", background: "#dbeafe",
-          color: "#1e40af", fontSize: 13, fontWeight: 600, cursor: "pointer",
-          whiteSpace: "nowrap", transition: "opacity 0.15s",
-        }}>
-        Planifier
-      </button>
-    </div>
-  );
-}
-
-// ── Carte soutenance planifiée ────────────────────────
-function SoutenanceCard({ soutenance }) {
-  const cfg = STATUS_SOUTENANCE[soutenance.statut] || STATUS_SOUTENANCE.PLANIFIEE;
-  return (
-    <div style={{
-      background: "var(--surface)",
-      border: `1px solid ${cfg.border}`,
-      borderLeft: `4px solid ${cfg.border}`,
-      borderRadius: "var(--radius-lg)", padding: "18px 22px",
-      display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16,
-    }}>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 3 }}>
-          {soutenance.binome?.etudiant1?.nom} & {soutenance.binome?.etudiant2?.nom}
-        </div>
-        <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>
-          {soutenance.affectation?.sujet?.titre}
-        </div>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 11, fontFamily: "'DM Mono', monospace", color: "var(--muted)" }}>
-            {soutenance.creneau?.date} · {soutenance.creneau?.heureDebut}
-          </span>
-          <span style={{ fontSize: 11, color: "var(--muted)" }}>
-            {soutenance.creneau?.salle}
-          </span>
-          <span style={{ fontSize: 11, color: "var(--muted)" }}>
-            Jury : {soutenance.jury?.map(j => j.nom).join(", ") || "—"}
-          </span>
-        </div>
-      </div>
-      <Badge config={cfg} />
     </div>
   );
 }
 
 // ── Composant principal ───────────────────────────────
 export default function Planification() {
-  const [affectations, setAffectations]   = useState([]);
-  const [soutenances, setSoutenances]     = useState([]);
-  const [creneaux, setCreneaux]           = useState([]);
-  const [profs, setProfs]                 = useState([]);
-  const [loading, setLoading]             = useState(true);
-  const [autoLoading, setAutoLoading]     = useState(false);
-  const [error, setError]                 = useState(null);
-  const [success, setSuccess]             = useState(null);
-  const [modalAff, setModalAff]           = useState(null);
-  const [activeTab, setActiveTab]         = useState("aplanifier");
+  const [affectations, setAffectations] = useState([]);
+  const [soutenances, setSoutenances]   = useState([]);
+  const [creneaux, setCreneaux]         = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [autoLoading, setAutoLoading]   = useState(false);
+  const [error, setError]               = useState(null);
+  const [success, setSuccess]           = useState(null);
+  const [modalData, setModalData]       = useState(null);
+
 
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [affs, sous, cren, prs] = await Promise.all([
+      const [affs, sous, cren] = await Promise.all([
         affectationApi.getAll(),
-        soutenanceApi.getPlanningFinal(),
+        soutenanceApi.getAll(),
         creneauApi.getAll(),
-        professeurApi.getAll(),
       ]);
       setAffectations(affs);
       setSoutenances(sous);
-      setCreneaux(cren);
-      setProfs(prs);
+      // Filtre: seulement créneaux VALIDES (jury + salle)
+      setCreneaux(cren.filter(c => c.jury?.length > 0 && c.salle));
       setError(null);
     } catch (e) { setError(e.message); }
     finally { setLoading(false); }
@@ -278,168 +481,199 @@ export default function Planification() {
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  // Affectations validées sans soutenance encore planifiée
-  const binomesDejaPlanes = new Set(soutenances.map(s => s.binome?.id));
-  const aplanifier = affectations.filter(a =>
-    a.statut === "VALIDEE" && !binomesDejaPlanes.has(a.binome?.id)
+
+
+  const binomesPlanes = new Set(soutenances.map(s => s.binome?.id));
+  const aplanifier    = affectations.filter(a =>
+    a.statut === "VALIDEE" && !binomesPlanes.has(a.binome?.id)
   );
 
+  // Événements calendrier
+  const calendarEvents = [
+    // Créneaux disponibles — verts — titre = "Salle · Prof1, Prof2"
+    ...creneaux.filter(c => c.statut === "DISPONIBLE").map(c => {
+      const juryNoms = c.jury?.map(j => j.nom.split(" ").slice(-1)[0]).join(", ");
+      return {
+        id:    `libre-${c.id}`,
+        title: `${c.salle}${juryNoms ? ` · ${juryNoms}` : ""}`,
+        start: `${c.date}T${c.heureDebut}`,
+        end:   `${c.date}T${c.heureFin}`,
+        backgroundColor: "#d1fae5", borderColor: "#10b981", textColor: "#065f46",
+        extendedProps: { type: "libre", creneau: c },
+      };
+    }),
+    // Soutenances planifiées — bleues — titre = "Étudiant1 & Étudiant2"
+    ...soutenances.filter(s => s.creneau).map(s => ({
+      id:    `sout-${s.id}`,
+      title: `${s.binome?.etudiant1?.nom?.split(" ").slice(-1)[0]} & ${s.binome?.etudiant2?.nom?.split(" ").slice(-1)[0]}`,
+      start: `${s.creneau.date}T${s.creneau.heureDebut}`,
+      end:   `${s.creneau.date}T${s.creneau.heureFin}`,
+      backgroundColor: "#dbeafe", borderColor: "#3b82f6", textColor: "#1e40af",
+      extendedProps: { type: "planifiee", soutenance: s },
+    })),
+  ];
+
+  // CSS grid drag — receives {affectation, creneau} directly
+  const handleEventReceive = ({ affectation, creneau }) => {
+    if (!affectation || !creneau) {
+      setError("Déposez sur un créneau vert disponible.");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+    if (binomesPlanes.has(affectation.binome?.id)) {
+      setError("Ce binôme a déjà une soutenance planifiée.");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+    soutenanceApi.planifier({ affectationId: affectation.id, creneauId: creneau.id })
+      .then(() => {
+        setSuccess(`Soutenance planifiée : ${affectation.binome?.etudiant1?.nom} & ${affectation.binome?.etudiant2?.nom}`);
+        setTimeout(() => setSuccess(null), 4000);
+        loadAll();
+      })
+      .catch(e => { setError(e.message); setTimeout(() => setError(null), 4000); });
+  };
+
+  // CSS grid click — receives event object directly
+  const handleEventClick = (ev) => {
+    if (ev.type === "libre") setModalData({ creneau: ev.creneau });
+    else if (ev.type === "planifiee") setModalData({ soutenance: ev.soutenance });
+  };
+
+  const handleAnnuler = async (soutenanceId) => {
+    try {
+      await soutenanceApi.annuler(soutenanceId);
+      setModalData(null);
+      setSuccess("Soutenance annulée.");
+      await loadAll();
+    } catch (e) { setError(e.message); }
+  };
+
   const handleAuto = async () => {
-    setAutoLoading(true);
-    setError(null);
-    setSuccess(null);
+    setAutoLoading(true); setError(null);
     try {
       const res = await soutenanceApi.planifierAuto();
-      const n = Array.isArray(res) ? res.length : 0;
-      setSuccess(`${n} soutenance${n > 1 ? "s" : ""} planifiée${n > 1 ? "s" : ""} automatiquement.`);
+      setSuccess(`${res.length} soutenance(s) planifiée(s) automatiquement.`);
       await loadAll();
     } catch (e) { setError(e.message); }
     finally { setAutoLoading(false); }
   };
 
-  const showSuccess = (msg) => {
-    setSuccess(msg);
-    setTimeout(() => setSuccess(null), 3000);
-  };
-
-  const totalValidees  = affectations.filter(a => a.statut === "VALIDEE").length;
-  const totalPlanifiees = soutenances.length;
-  const totalTerminees  = soutenances.filter(s => s.statut === "TERMINEE").length;
-
-  if (loading) return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {[1,2,3].map(i => <div key={i} style={{ height: 80, borderRadius: "var(--radius-lg)", background: "var(--surface)", border: "1px solid var(--border)", opacity: 1 - i * 0.2 }} />)}
-    </div>
-  );
+  if (loading) return <LoadingSkeleton rows={4} height={80} />;
 
   return (
-    <div style={{ animation: "fadeIn 0.3s ease" }}>
+    <div style={{ animation: "fadeUp 0.4s cubic-bezier(0.16,1,0.3,1)" }}>
       <style>{`
-        @keyframes fadeIn { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:translateY(0) } }
-        .btn-act { transition: opacity 0.15s, transform 0.1s; cursor: pointer; }
-        .btn-act:hover { opacity: 0.85; }
-        .btn-act:active { transform: scale(0.97); }
+        .fc { font-family: 'Plus Jakarta Sans', sans-serif !important; }
+        .fc-toolbar-title { font-size: 15px !important; font-weight: 700 !important; color: var(--text) !important; }
+        .fc-button { background: var(--surface) !important; border: 1px solid var(--border2) !important; color: var(--text-2) !important; font-size: 12px !important; font-weight: 600 !important; border-radius: var(--r-sm) !important; padding: 5px 10px !important; box-shadow: var(--shadow-xs) !important; font-family: 'Plus Jakarta Sans', sans-serif !important; }
+        .fc-button:hover { background: var(--surface2) !important; }
+        .fc-button-primary:not(:disabled).fc-button-active { background: var(--blue-600) !important; border-color: var(--blue-600) !important; color: #fff !important; }
+        .fc-col-header-cell { background: var(--surface2) !important; }
+        .fc-col-header-cell-cushion { color: var(--text-3) !important; font-size: 11px !important; font-weight: 600 !important; text-decoration: none !important; padding: 6px 4px !important; }
+        .fc-timegrid-slot-label { color: var(--text-4) !important; font-size: 10px !important; font-family: 'JetBrains Mono', monospace !important; }
+        .fc-event { border-radius: var(--r-sm) !important; font-size: 11px !important; font-weight: 600 !important; cursor: pointer !important; box-shadow: var(--shadow-xs) !important; }
+        .fc-event:hover { opacity: 0.9 !important; box-shadow: var(--shadow-md) !important; }
+        .fc-timegrid-event .fc-event-main { padding: 3px 6px !important; }
+        .fc-scrollgrid, .fc-scrollgrid-section > td, .fc-timegrid-slot { border-color: var(--border) !important; }
+        .fc-daygrid-day, .fc-timegrid-col { background: var(--surface) !important; }
+        .fc-day-today { background: var(--blue-50) !important; }
+        .fc-event-mirror { opacity: 0.7 !important; box-shadow: var(--shadow-blue) !important; }
+        .fc-toolbar { margin-bottom: 14px !important; }
+        .fc-timegrid-slot { min-height: 56px !important; }
+        .fc-timegrid-event { min-height: 52px !important; }
+        .fc-timegrid-event-harness { margin-right: 0 !important; }
+        .fc-timegrid-col-events { margin: 0 2px !important; }
+        .draggable-binome:active { cursor: grabbing !important; }
+        @keyframes scaleIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
       `}</style>
 
-      {/* Header */}
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
-          Phase 3
-        </div>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-          <h1 style={{ fontSize: 24, fontWeight: 600, color: "var(--text)", letterSpacing: "-0.4px" }}>
-            Planification des soutenances
-          </h1>
-          {aplanifier.length > 0 && (
-            <button className="btn-act"
-              onClick={handleAuto}
-              disabled={autoLoading}
-              style={{
-                padding: "9px 20px", borderRadius: 8,
-                border: "none", background: "#6366f1", color: "#fff",
-                fontSize: 13, fontWeight: 600,
-                opacity: autoLoading ? 0.6 : 1,
-              }}>
-              {autoLoading ? "Planification en cours..." : `Planification automatique (${aplanifier.length})`}
-            </button>
-          )}
-        </div>
-      </div>
+      <PageHeader phase={3}
+        title="Planification des soutenances"
+        subtitle="Glissez les binômes vers les créneaux disponibles. Cliquez sur un créneau pour voir les détails."
+        action={aplanifier.length > 0 && (
+          <Button variant="violet" icon={Zap} onClick={handleAuto} disabled={autoLoading}>
+            {autoLoading ? "En cours..." : `Planification auto (${aplanifier.length})`}
+          </Button>
+        )}
+      />
 
-      <StatsBar stats={[
-        { label: "Validées",   value: totalValidees,   color: "#10b981" },
-        { label: "À planifier",value: aplanifier.length, total: totalValidees, color: "#f59e0b" },
-        { label: "Planifiées", value: totalPlanifiees,  total: totalValidees, color: "#3b82f6" },
-        { label: "Terminées",  value: totalTerminees,   total: totalValidees, color: "#6366f1" },
+      <StatBar stats={[
+        { label: "À planifier",     value: aplanifier.length,                                                   color: "var(--amber)"    },
+        { label: "Planifiées",      value: soutenances.length, total: aplanifier.length + soutenances.length,  color: "var(--blue-600)" },
+        { label: "Créneaux libres", value: creneaux.filter(c => c.statut === "DISPONIBLE").length,              color: "var(--green)"    },
       ]} />
 
-      {/* Alertes */}
-      {error && (
-        <div style={{ background: "#fee2e2", border: "1px solid #ef4444", color: "#991b1b", borderRadius: "var(--radius)", padding: "10px 14px", fontSize: 13, marginBottom: 16, fontWeight: 500 }}>
-          {error}
-          <button onClick={() => setError(null)} style={{ float: "right", background: "none", border: "none", color: "#991b1b", cursor: "pointer", fontWeight: 700 }}>x</button>
-        </div>
-      )}
-      {success && (
-        <div style={{ background: "#d1fae5", border: "1px solid #10b981", color: "#065f46", borderRadius: "var(--radius)", padding: "10px 14px", fontSize: 13, marginBottom: 16, fontWeight: 500 }}>
-          {success}
-        </div>
-      )}
+      {error   && <Alert type="error"   message={error}   onClose={() => setError(null)}   />}
+      {success && <Alert type="success" message={success} onClose={() => setSuccess(null)} />}
 
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: 2, borderBottom: "2px solid var(--border)", marginBottom: 24 }}>
-        {[
-          { id: "aplanifier", label: `À planifier (${aplanifier.length})` },
-          { id: "planifiees",  label: `Planifiées (${totalPlanifiees})` },
-        ].map(t => (
-          <button key={t.id}
-            onClick={() => setActiveTab(t.id)}
-            style={{
-              padding: "10px 18px", border: "none", background: "none", cursor: "pointer",
-              fontSize: 13, fontWeight: activeTab === t.id ? 600 : 400,
-              color: activeTab === t.id ? "#3b82f6" : "var(--muted)",
-              borderBottom: activeTab === t.id ? "2px solid #3b82f6" : "2px solid transparent",
-              marginBottom: -2,
-            }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Alert type="info" message="Vert = créneau disponible (déposez un binôme). Bleu = soutenance planifiée. Cliquez pour voir les détails." />
 
-      {/* À planifier */}
-      {activeTab === "aplanifier" && (
+      <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 20, alignItems: "start" }}>
+
+        {/* Colonne gauche */}
         <div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-2)", marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>À planifier</span>
+            <Badge label={String(aplanifier.length)} variant="amber" />
+          </div>
+
           {aplanifier.length === 0 ? (
-            <div style={{
-              textAlign: "center", padding: "60px 0",
-              border: "1px dashed var(--border2)", borderRadius: "var(--radius-lg)",
-            }}>
-              <div style={{ fontSize: 15, fontWeight: 500, color: "var(--text)", marginBottom: 6 }}>
-                Toutes les soutenances sont planifiées
-              </div>
-              <div style={{ fontSize: 13, color: "var(--muted)" }}>
-                Rendez-vous dans l'onglet "Planifiées" pour voir le planning.
-              </div>
-            </div>
+            <EmptyState icon={CheckCircle} title="Tous planifiés" description="Tous les binômes ont une soutenance." />
           ) : (
             <div>
-              <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 12 }}>
-                {aplanifier.length} affectation{aplanifier.length > 1 ? "s" : ""} validée{aplanifier.length > 1 ? "s" : ""} en attente de planification.
-                Utilisez la planification automatique ou assignez manuellement chaque binôme.
+              {aplanifier.map(a => <BinomeCard key={a.id} affectation={a} />)}
+            </div>
+          )}
+
+          {soutenances.length > 0 && (
+            <div style={{ marginTop: 24 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-2)", marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>Planifiées</span>
+                <Badge label={String(soutenances.length)} variant="blue" />
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {aplanifier.map(a => (
-                  <AffectationCard key={a.id} affectation={a} onManuel={setModalAff} />
-                ))}
-              </div>
+              {soutenances.map(s => (
+                <div key={s.id}
+                  onClick={() => setModalData({ soutenance: s })}
+                  style={{
+                    background: "var(--surface)", border: "1px solid var(--blue-200)",
+                    borderLeft: "3px solid var(--blue-500)", borderRadius: "var(--r-md)",
+                    padding: "9px 12px", marginBottom: 6, cursor: "pointer",
+                    boxShadow: "var(--shadow-xs)",
+                    transition: "all 0.15s",
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.boxShadow = "var(--shadow-md)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.boxShadow = "var(--shadow-xs)"; }}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--blue-700)" }}>
+                    {s.binome?.etudiant1?.nom?.split(" ").slice(-1)[0]} & {s.binome?.etudiant2?.nom?.split(" ").slice(-1)[0]}
+                  </div>
+                  <div style={{ fontSize: 10, color: "var(--text-4)", marginTop: 2 }}>
+                    {s.creneau?.date} · {s.creneau?.heureDebut} · {s.creneau?.salle}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
-      )}
 
-      {/* Planifiées */}
-      {activeTab === "planifiees" && (
-        <div>
-          {soutenances.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "60px 0", color: "var(--muted)" }}>
-              Aucune soutenance planifiée.
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {soutenances.map(s => <SoutenanceCard key={s.id} soutenance={s} />)}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Modal planification manuelle */}
-      {modalAff && (
-        <FormulaireManuel
-          affectation={modalAff}
+        {/* Calendrier */}
+        <CalendrierCustom
           creneaux={creneaux}
-          profs={profs}
-          onPlanifie={() => { showSuccess("Soutenance planifiée avec succès."); loadAll(); }}
-          onClose={() => setModalAff(null)}
+          soutenances={soutenances}
+          onEventReceive={handleEventReceive}
+          onEventClick={handleEventClick}
+          affectations={affectations}
+        />
+      </div>
+
+      {/* Modal détail */}
+      {modalData && (
+        <ModalDetail
+          data={modalData}
+          onClose={() => setModalData(null)}
+          onAnnuler={handleAnnuler}
+          onResultat={loadAll}
         />
       )}
     </div>
