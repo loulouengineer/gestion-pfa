@@ -1,14 +1,22 @@
 package com.pfa.gestion_pfa.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
+import lombok.*;
+import java.util.List;
 
-@Data
-@EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(name = "professeur")
+@Table(name = "professeurs")
+@PrimaryKeyJoinColumn(name = "utilisateur_id")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@EqualsAndHashCode(callSuper = true)
 public class Professeur extends Utilisateur {
 
+    @Column(nullable = false)
     private String departement;
+
+    @OneToMany(mappedBy = "encadrant", cascade = CascadeType.ALL)
+    private List<Sujet> sujets;
 }
