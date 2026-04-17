@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -28,10 +29,12 @@ public class ChoixSujetController {
 
     // Étudiant consulte ses choix actuels
     @GetMapping("/binome/{binomeId}")
-    @PreAuthorize("hasAnyRole('ETUDIANT','CHEF_DEPARTEMENT')")
-    public ResponseEntity<List<ChoixSujet>> getChoixParBinome(@PathVariable Long binomeId) {
+    @Transactional
+    public ResponseEntity<?> getChoixParBinome(@PathVariable Long binomeId) {
         return ResponseEntity.ok(choixSujetService.getChoixParBinome(binomeId));
     }
+
+
 
     // DTO interne
     @Data

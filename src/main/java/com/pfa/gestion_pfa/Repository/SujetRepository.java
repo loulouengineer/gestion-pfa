@@ -7,7 +7,11 @@ import java.util.List;
 
 @Repository
 public interface SujetRepository extends JpaRepository<Sujet, Long> {
+
+    // ✅ pas de "static", Spring Data génère l'implémentation automatiquement
     List<Sujet> findByDisponibleTrueAndConfirmeTrue();
+
     List<Sujet> findByEncadrantId(Long professeurId);
+
     List<Sujet> findByConfirmeTrue();
 }
