@@ -14,19 +14,19 @@ const NAV_ITEMS = [
   { num: 4, label: 'Mes vœux',        sub: 'Ordre & soumission',       id: 'mes-choix' },
 ];
 
+// ✅ id=1 correspond à Ahmed (utilisateur_id=1 dans etudiants)
 const ETUDIANT = {
   id: 1,
   nom: 'Ahmed Ben Ali',
-  matricule: '2024001',
+  matricule: 'ET2024001',
   moyenne: 14.5,
-  specialite: 'GL',
 };
 
 const PAGE_META = {
-  binome:          { title: 'Mon binôme',        sub: 'Recherchez et associez-vous à un partenaire pour votre PFA' },
-  sujets:          { title: 'Sujets disponibles', sub: 'Parcourez et sélectionnez vos sujets de PFA' },
-  recommandations: { title: 'Recommandations IA', sub: 'Sujets suggérés selon votre profil académique' },
-  'mes-choix':     { title: 'Mes vœux',           sub: 'Classez vos préférences et soumettez votre liste finale' },
+  binome:          { title: 'Mon binôme',         sub: 'Recherchez et associez-vous à un partenaire pour votre PFA' },
+  sujets:          { title: 'Sujets disponibles',  sub: 'Parcourez et sélectionnez vos sujets de PFA' },
+  recommandations: { title: 'Recommandations IA',  sub: 'Sujets suggérés selon votre profil académique' },
+  'mes-choix':     { title: 'Mes vœux',            sub: 'Classez vos préférences et soumettez votre liste finale' },
 };
 
 export default function App() {
@@ -43,19 +43,7 @@ export default function App() {
 
     getBinomeActuel(ETUDIANT.id)
       .then((res) => {
-        const b = res.data;
-        const partenaire = b.etudiant1.id === ETUDIANT.id ? b.etudiant2 : b.etudiant1;
-        setBinome({
-          id: b.id,
-          moyenneCommune: b.moyenneBinome,
-          partenaire: {
-            id: partenaire.id,
-            nom: partenaire.nom,
-            email: partenaire.email,
-            matricule: partenaire.matricule,
-            moyenne: partenaire.moyenne,
-          }
-        });
+        if (res.data) setBinome(res.data); // ✅ BinomeDTO contient déjà {id, partenaire, moyenneCommune}
       })
       .catch(console.error);
   }, []);
@@ -102,7 +90,7 @@ export default function App() {
           <div>{ETUDIANT.matricule} · {ETUDIANT.moyenne}/20</div>
           {binome && (
             <div className="footer-binome">
-              Binôme · {binome.partenaire.nom.split(' ')[0]}
+              Binôme · {binome.partenaire?.nom?.split(' ')[0]}
             </div>
           )}
           <div className="footer-backend">Backend · localhost:8081</div>
@@ -171,8 +159,7 @@ export default function App() {
           )}
           {onglet === 'mes-choix' && (
             <ChoixSujets
-              etudiantId={binome?.id}
-              binome={binome}
+              etudiantId={ETUDIANT.id} // ✅ id de l'étudiant, pas du binôme
               nouveauSujet={nouveauSujet}
               onChoixChange={setChoixActuels}
               onChoixSoumis={() => setNouveauSujet(null)}

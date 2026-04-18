@@ -38,9 +38,6 @@ export default function ChoixSujets({
 
   const ajouterSujet = (sujet) => {
     const courant = choixRef.current;
-    console.log('binomeRef:', binomeRef.current);  // ✅
-    console.log('sujet:', sujet);                   // ✅
-    console.log('choix actuels:', choixRef.current); 
 
     if (courant.find((c) => c.id === sujet.id)) {
       showMessage('Ce sujet est déjà dans vos vœux.', 'warning');
