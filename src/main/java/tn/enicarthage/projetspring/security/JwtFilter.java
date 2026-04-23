@@ -30,23 +30,35 @@ public class JwtFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String authHeader = request.getHeader("Authorization");
+        System.out.println(">>> URI: " + request.getRequestURI());
+        System.out.println(">>> Auth header: " + authHeader);
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
+            boolean valid = jwtUtil.validateToken(token);
+            System.out.println(">>> Token valid: " + valid);
 
-            if (jwtUtil.validateToken(token)) {
+            if (valid) {
                 String email = jwtUtil.extractEmail(token);
-                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+                System.out.println(">>> Email: " + email);
 
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails, null, userDetails.getAuthorities());
+                try {
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+                    System.out.println(">>> Authorities: " + userDetails.getAuthorities());
 
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request));
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, userDetails.getAuthorities());
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                    System.out.println(">>> Auth set in SecurityContext ✅");
 
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                } catch (Exception e) {
+                    System.out.println(">>> loadUserByUsername FAILED: " + e.getMessage());
+                }
             }
+        } else {
+            System.out.println(">>> No Bearer token found ❌");
         }
 
         filterChain.doFilter(request, response);

@@ -21,6 +21,8 @@
         <java.version>17</java.version>
     </properties>
 
+
+
     <dependencies>
         <!-- Spring Boot Web (REST API) -->
         <dependency>
@@ -84,6 +86,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
+
 
         <!-- Tests -->
         <dependency>

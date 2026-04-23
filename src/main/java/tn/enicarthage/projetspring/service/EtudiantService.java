@@ -1,13 +1,12 @@
 package tn.enicarthage.projetspring.service;
 
+import lombok.NoArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import tn.enicarthage.projetspring.dto.EtudiantRequest;
 import tn.enicarthage.projetspring.dto.RecommandationDTO;
-import tn.enicarthage.projetspring.entity.Etudiant;
-import tn.enicarthage.projetspring.entity.StatutSujet;
-import tn.enicarthage.projetspring.entity.Sujet;
+import tn.enicarthage.projetspring.entity.*;
 import tn.enicarthage.projetspring.repository.EtudiantRepository;
 import tn.enicarthage.projetspring.repository.SujetRepository;
 
@@ -15,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@NoArgsConstructor
 @Service
 public class EtudiantService {
 
@@ -36,11 +36,19 @@ public class EtudiantService {
         }
         Etudiant etudiant = new Etudiant();
         etudiant.setNom(request.getNom());
+        etudiant.setPrenom(request.getPrenom());                        // ← fix
         etudiant.setEmail(request.getEmail());
         etudiant.setPassword(passwordEncoder.encode(request.getPassword()));
-        etudiant.setMoyenne(request.getMoyenne());
+        etudiant.setRole(Role.ETUDIANT);                                // ← fix
+        etudiant.setMatricule("ETU-" + System.currentTimeMillis());     // ← fix
+        etudiant.setMoyenne(request.getMoyenne().floatValue());
         etudiant.setCompetences(request.getCompetences());
         return etudiantRepository.save(etudiant);
+    }
+
+    // Ajoute cette méthode privée
+    private String generateMatricule() {
+        return "ETU-" + System.currentTimeMillis();
     }
 
     public List<RecommandationDTO> getRecommandations(String email) {

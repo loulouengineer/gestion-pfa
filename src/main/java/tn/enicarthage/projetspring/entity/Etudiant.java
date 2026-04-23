@@ -1,49 +1,53 @@
 package tn.enicarthage.projetspring.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import lombok.*;
+
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "etudiants")
-public class Etudiant {
+@PrimaryKeyJoinColumn(name = "utilisateur_id")  // cohérent avec Professeur
+@NoArgsConstructor
+@AllArgsConstructor
+@Getter
+@Setter
+@Builder
+@EqualsAndHashCode(callSuper = true)
+public class Etudiant extends User {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false)
-    private String nom;
-
-    @Column(nullable = false, unique = true)
-    private String email;
+    // ❌ Supprimé : id, nom, email, password → déjà dans User
 
     @Column(nullable = false)
-    private String password;
+    private double moyenne;
 
+    @Column(nullable = true, unique = true) // ← nullable = true
+    private String matricule;
+
+    @Builder.Default
     @Column(nullable = false)
-    private Double moyenne;
+    private boolean aUnBinome = false;
+
+    @ElementCollection(targetClass = Difficulte.class, fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "etudiant_difficultes",
+            joinColumns = @JoinColumn(name = "etudiant_id")
+    )
+    @Enumerated(EnumType.STRING)
+    @Column(name = "difficulte")
+    @Builder.Default
+    @JsonIgnore
+    private List<Difficulte> difficultes = new ArrayList<>();
 
     @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "etudiant_competences",
-            joinColumns = @JoinColumn(name = "etudiant_id"))
+    @CollectionTable(
+            name = "etudiant_competences",
+            joinColumns = @JoinColumn(name = "etudiant_id")
+    )
     @Column(name = "competence")
     private List<String> competences;
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public String getNom() { return nom; }
-    public void setNom(String nom) { this.nom = nom; }
-
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
-
-    public Double getMoyenne() { return moyenne; }
-    public void setMoyenne(Double moyenne) { this.moyenne = moyenne; }
-
-    public List<String> getCompetences() { return competences; }
-    public void setCompetences(List<String> competences) { this.competences = competences; }
+    // ❌ Tous les getters/setters manuels supprimés → gérés par @Getter @Setter
+    // ❌ getMatricule() supprimé → s'appelait elle-même infiniment
 }

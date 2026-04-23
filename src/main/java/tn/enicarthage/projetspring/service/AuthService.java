@@ -35,14 +35,15 @@ public class AuthService {
 
         User user = new User();
         user.setNom(request.getNom());
+        user.setPrenom(request.getPrenom());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(Role.valueOf(request.getRole()));
 
-        userRepository.save(user);
+        user = userRepository.save(user); // ← récupère l'entité avec l'id généré
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
-        return new AuthResponse(token, user.getRole().name(), user.getNom());
+        return new AuthResponse(token, user.getRole().name(), user.getNom(), user.getId());
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -54,7 +55,7 @@ public class AuthService {
         }
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
-        return new AuthResponse(token, user.getRole().name(), user.getNom());
+        return new AuthResponse(token, user.getRole().name(), user.getNom(), user.getId());
     }
 
     public AuthResponse loginEtudiant(LoginRequest request) {
@@ -66,6 +67,6 @@ public class AuthService {
         }
 
         String token = jwtUtil.generateToken(etudiant.getEmail(), "ETUDIANT");
-        return new AuthResponse(token, "ETUDIANT", etudiant.getNom());
+        return new AuthResponse(token, "ETUDIANT", etudiant.getNom(), etudiant.getId());
     }
 }

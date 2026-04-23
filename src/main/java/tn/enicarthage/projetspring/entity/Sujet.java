@@ -1,9 +1,15 @@
 package tn.enicarthage.projetspring.entity;
 
 import jakarta.persistence.*;
+import lombok.*;
+
 import java.time.LocalDate;
 import java.util.List;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Entity
 @Table(name = "sujets")
 public class Sujet {
@@ -17,11 +23,18 @@ public class Sujet {
 
     @Column
     private Integer rang;
-    public Integer getRang() {return rang; }
-    public void setRang(Integer rang) { this.rang = rang;}
 
     @Column(columnDefinition = "TEXT")
     private String description;
+
+    @Column(nullable = false)
+    private int difficulte;
+
+    @Builder.Default
+    private boolean disponible = true;
+
+    @Builder.Default
+    private boolean confirme = false;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "sujet_mots_cles", joinColumns = @JoinColumn(name = "sujet_id"))
@@ -33,36 +46,30 @@ public class Sujet {
     @Column(name = "competence")
     private List<String> competences;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "sujet_technologies", joinColumns = @JoinColumn(name = "sujet_id"))
+    @Column(name = "technologie")
+    private List<String> technologie;
+
     @Enumerated(EnumType.STRING)
     private StatutSujet statut = StatutSujet.EN_ATTENTE;
 
     private LocalDate dateProposition;
 
+    // ✅ Un seul champ — Professeur étend User, donc encadrant couvre les deux
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "enseignant_id")
-    private User enseignant;
+    private Professeur encadrant;
+    public List<String> getTechnologies() {
+        return technologie;
+    }
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    // ❌ Supprimé : private User enseignant — redondant avec encadrant
+    // ❌ Supprimé : tous les getters/setters manuels — gérés par @Data
+    // ❌ Supprimé : getTechnologies() qui appelait getTechnologie() — choisir un seul nom
 
-    public String getTitre() { return titre; }
-    public void setTitre(String titre) { this.titre = titre; }
-
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-
-    public List<String> getMotsCles() { return motsCles; }
-    public void setMotsCles(List<String> motsCles) { this.motsCles = motsCles; }
-
-    public List<String> getCompetences() { return competences; }
-    public void setCompetences(List<String> competences) { this.competences = competences; }
-
-    public StatutSujet getStatut() { return statut; }
-    public void setStatut(StatutSujet statut) { this.statut = statut; }
-
-    public LocalDate getDateProposition() { return dateProposition; }
-    public void setDateProposition(LocalDate dateProposition) { this.dateProposition = dateProposition; }
-
-    public User getEnseignant() { return enseignant; }
-    public void setEnseignant(User enseignant) { this.enseignant = enseignant; }
+    // Si tu as besoin d'accéder à encadrant comme User dans ton code :
+    public User getEnseignant() {
+        return encadrant; // Professeur IS-A User grâce à l'héritage
+    }
 }

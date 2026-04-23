@@ -18,7 +18,7 @@ public class SujetController {
     @Autowired
     private SujetService sujetService;
 
-    // POST /api/sujets — Enseignant propose un sujet
+    // pOST /api/sujets — Enseignant propose un sujet
     @PostMapping
     public ResponseEntity<Sujet> creerSujet(
             @RequestBody SujetRequest request,
@@ -27,11 +27,17 @@ public class SujetController {
         return ResponseEntity.ok(sujetService.creerSujet(request, email));
     }
 
-    // GET /api/sujets/mes-sujets — Enseignant voit ses sujets
+    // gET /api/sujets/mes_sujets — Enseignant voit ses sujets
     @GetMapping("/mes-sujets")
     public ResponseEntity<List<Sujet>> getMesSujets(Authentication authentication) {
         String email = authentication.getName();
         return ResponseEntity.ok(sujetService.getMesSujets(email));
+    }
+
+    // Ajoute cette méthode dans SujetController.java
+    @GetMapping("/disponibles")
+    public ResponseEntity<List<Sujet>> getSujetsDisponibles() {
+        return ResponseEntity.ok(sujetService.getSujetsDisponibles());
     }
 
     // DELETE /api/sujets/{id} — Enseignant supprime son sujet

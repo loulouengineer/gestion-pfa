@@ -1,8 +1,14 @@
 package tn.enicarthage.projetspring.entity;
 
 import jakarta.persistence.*;
+import lombok.*;
 
 @Entity
+
+@Inheritance(strategy = InheritanceType.JOINED)  // ← ajouté
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "users")
 public class User {
 
@@ -13,6 +19,9 @@ public class User {
     @Column(nullable = false)
     private String nom;
 
+    @Column(nullable = false)
+    private String prenom;  // ← ajouté (utilisé dans Professeur)
+
     @Column(nullable = false, unique = true)
     private String email;
 
@@ -22,19 +31,4 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public String getNom() { return nom; }
-    public void setNom(String nom) { this.nom = nom; }
-
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
-
-    public Role getRole() { return role; }
-    public void setRole(Role role) { this.role = role; }
 }
