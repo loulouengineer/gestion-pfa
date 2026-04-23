@@ -5,6 +5,7 @@ import "./Register.css";
 
 const Register = () => {
   const [nom, setNom] = useState("");
+  const [prenom, setPrenom] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("ENSEIGNANT");
   const [password, setPassword] = useState("");
@@ -16,7 +17,7 @@ const Register = () => {
   const navigate = useNavigate();
 
   const handleRegister = async () => {
-    if (!nom || !email || !password || !confirmPassword) {
+    if (!nom || !prenom || !email || !password || !confirmPassword) {
       setError("Veuillez remplir tous les champs");
       return;
     }
@@ -36,9 +37,9 @@ const Register = () => {
       let response;
 
       if (role === "ETUDIANT") {
-        // Appel endpoint étudiant
-        response = await api.post("/api/etudiants/inscrire", {
+        response = await api.post("/etudiants/inscrire", {
           nom,
+          prenom,
           email,
           password,
           moyenne: parseFloat(moyenne),
@@ -48,8 +49,7 @@ const Register = () => {
             .filter(c => c),
         });
 
-        // Login étudiant pour avoir le token
-        const loginResponse = await api.post("/api/auth/login-etudiant", {
+        const loginResponse = await api.post("/auth/login-etudiant", {
           email,
           password,
         });
@@ -60,9 +60,10 @@ const Register = () => {
         navigate("/dashboard-etudiant");
 
       } else {
-        // Appel endpoint user normal
-        response = await api.post("/api/auth/register", {
+        // ✅ prenom ajouté ici
+        response = await api.post("/auth/register", {
           nom,
+          prenom,
           email,
           password,
           role,
@@ -101,12 +102,22 @@ const Register = () => {
 
         <div className="register-form">
           <div className="form-group">
-            <label>Nom complet</label>
+            <label>Nom</label>
             <input
               type="text"
               placeholder="Votre nom"
               value={nom}
               onChange={e => setNom(e.target.value)}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Prénom</label>
+            <input
+              type="text"
+              placeholder="Votre prénom"
+              value={prenom}
+              onChange={e => setPrenom(e.target.value)}
             />
           </div>
 
@@ -129,7 +140,6 @@ const Register = () => {
             </select>
           </div>
 
-          {/* Champs spécifiques étudiant */}
           {role === "ETUDIANT" && (
             <>
               <div className="form-group">

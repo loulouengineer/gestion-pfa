@@ -40,7 +40,7 @@ export default function Formulaire({ onSuccess, onClose }) {
     setError("");
 
     try {
-      await api.post("/api/sujets", {
+      await api.post("/sujets", {
         titre: formData.titre,
         description: formData.description,
         motsCles: formData.motsCles.split(",").map(m => m.trim()).filter(m => m),

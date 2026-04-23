@@ -18,7 +18,7 @@ export default function DashboardEtudiant() {
   const fetchRecommandations = async () => {
     setLoading(true);
     try {
-      const response = await api.get("/api/etudiants/recommandations");
+      const response = await api.get("/etudiants/recommandations");
       setRecommandations(response.data);
     } catch (err) {
       console.error("Erreur recommandations", err);

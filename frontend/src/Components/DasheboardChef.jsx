@@ -17,7 +17,7 @@ export default function DashboardChef() {
 
   const fetchSujets = async () => {
     try {
-      const response = await api.get("/api/sujets");
+      const response = await api.get("/sujets");
       setSujets(response.data);
     } catch (err) {
       console.error(err);

@@ -25,17 +25,18 @@ export default function Login() {
 
       // Essaie d'abord login normal (enseignant/chef)
       try {
-        response = await api.post("/api/auth/login", { email, password });
+        response = await api.post("/auth/login", { email, password });
       } catch (err) {
         // Si échec, essaie login étudiant
-        response = await api.post("/api/auth/login-etudiant", { email, password });
+        response = await api.post("/auth/login-etudiant", { email, password });
       }
 
-      const { token, role, nom } = response.data;
+      const { token, role, nom, id } = response.data;
 
       localStorage.setItem("token", token);
       localStorage.setItem("role", role);
       localStorage.setItem("userName", nom);
+      localStorage.setItem("userId", id);
 
       if (role === "ENSEIGNANT") navigate("/dashboard-prof");
       else if (role === "CHEF_DEPT") navigate("/dashboard-chef");

@@ -22,7 +22,7 @@ export default function DashboardProf() {
 
   const fetchSujets = async () => {
     try {
-      const res = await api.get("/api/sujets/mes-sujets");
+      const res = await api.get("/sujets/mes-sujets");
       setSujets(res.data);
     } catch (err) {
       console.error(err);
@@ -39,7 +39,7 @@ export default function DashboardProf() {
     setLoading(true);
     setError("");
     try {
-      await api.post("/api/sujets", {
+      await api.post("/sujets", {
         titre: newSujet.titre,
         description: newSujet.description,
         motsCles: newSujet.mots.split(",").map(m => m.trim()).filter(m => m),
