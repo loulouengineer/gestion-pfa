@@ -163,6 +163,10 @@ public class EtudiantService {
         return Math.round(score * 10.0) / 10.0;
     }
 
+        public List<Etudiant> rechercher(String query) {
+            return etudiantRepository.rechercherEtudiants(query);
+        }
+
     private String genererExplication(Etudiant etudiant, Sujet sujet,
                                       int rangEtudiant, int totalEtudiants,
                                       double score) {

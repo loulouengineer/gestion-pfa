@@ -46,7 +46,7 @@ public class ChoixSujetService {
             Sujet sujet = sujetRepository.findById(sujetId)
                     .orElseThrow(() -> new RuntimeException("Sujet introuvable : " + sujetId));
 
-            if (!sujet.isDisponible() || !sujet.isConfirme())
+            if (!sujet.isDisponible() )
                 throw new RuntimeException("Le sujet '" + sujet.getTitre() + "' n'est pas disponible.");
 
             nouveauxChoix.add(ChoixSujet.builder()

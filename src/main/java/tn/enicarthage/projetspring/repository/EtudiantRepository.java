@@ -16,13 +16,17 @@ public interface EtudiantRepository extends JpaRepository<Etudiant, Long> {
 
     List<Etudiant> findAllByOrderByMoyenneDesc();
 
+    List<Etudiant> findByNomContainingIgnoreCaseOrMatriculeContainingIgnoreCase(String nom, String matricule);
 
     //chayma
     Optional<Etudiant> findByMatricule(String matricule);
 
     @Query("SELECT e FROM Etudiant e WHERE " +
             "LOWER(e.nom) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
-            "LOWER(e.matricule) LIKE LOWER(CONCAT('%', :q, '%')) ")
+            "LOWER(e.prenom) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
+            "LOWER(e.matricule) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
+            "LOWER(CONCAT(e.nom, ' ', e.prenom)) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
+            "LOWER(CONCAT(e.prenom, ' ', e.nom)) LIKE LOWER(CONCAT('%', :q, '%'))")
     List<Etudiant> rechercherEtudiants(@Param("q") String q);
 
 }

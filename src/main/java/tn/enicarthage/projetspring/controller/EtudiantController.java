@@ -24,6 +24,11 @@ public class EtudiantController {
         return ResponseEntity.ok(etudiantService.inscrire(request));
     }
 
+    @GetMapping("/recherche")
+    public ResponseEntity<List<Etudiant>> rechercher(@RequestParam String q) {
+        return ResponseEntity.ok(etudiantService.rechercher(q));
+    }
+
     @GetMapping("/recommandations")
     public ResponseEntity<List<RecommandationDTO>> getRecommandations(
             Authentication authentication) {
