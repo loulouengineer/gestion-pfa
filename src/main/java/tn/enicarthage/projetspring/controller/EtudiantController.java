@@ -26,4 +26,18 @@ public class EtudiantController {
         String email = authentication.getName();
         return ResponseEntity.ok(etudiantService.getRecommandations(email));
     }
+
+    @GetMapping("/profil")
+    public ResponseEntity<?> getProfil(Authentication authentication) {
+        String email = authentication.getName();
+        return ResponseEntity.ok(etudiantService.getProfil(email));
+    }
+
+    @PutMapping("/profil")
+    public ResponseEntity<?> updateProfil(
+            Authentication authentication,
+            @RequestBody EtudiantRequest request) {
+        String email = authentication.getName();
+        return ResponseEntity.ok(etudiantService.updateProfil(email, request));
+    }
 }
