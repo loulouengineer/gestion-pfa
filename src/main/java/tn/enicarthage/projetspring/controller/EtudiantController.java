@@ -18,11 +18,7 @@ public class EtudiantController {
     @Autowired
     private EtudiantService etudiantService;
 
-    @PostMapping("/inscrire")
-    public ResponseEntity<Etudiant> inscrire(
-            @RequestBody EtudiantRequest request) {
-        return ResponseEntity.ok(etudiantService.inscrire(request));
-    }
+
 
     @GetMapping("/recommandations")
     public ResponseEntity<List<RecommandationDTO>> getRecommandations(

@@ -9,16 +9,14 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import tn.enicarthage.projetspring.security.JwtFilter;
 
-import java.util.List;
 @EnableMethodSecurity
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private final JwtFilter jwtFilter; // ← JwtFilter au lieu de JwtAuthFilter
+    private final JwtFilter jwtFilter;
     private final CorsConfigurationSource corsConfigurationSource;
 
     public SecurityConfig(JwtFilter jwtFilter, CorsConfigurationSource corsConfigurationSource) {
@@ -34,13 +32,25 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // ✅ Endpoints publics (sans token)
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/login-etudiant",
+                                "/api/auth/register",
+                                "/api/auth/confirmer",
+                                "/api/etudiants/inscrire"
+                        ).permitAll()
+
+                        // ✅ Reste de /api/auth/** (si besoin)
                         .requestMatchers("/api/auth/**").permitAll()
-                        // SecurityConfig.java
+
+                        // ✅ Endpoints étudiants
                         .requestMatchers("/api/sujets/disponibles").hasAnyRole("ETUDIANT", "ADMIN")
                         .requestMatchers("/api/binomes/par-etudiant/**").hasAnyRole("ETUDIANT", "ADMIN")
                         .requestMatchers("/api/binomes/**").hasAnyRole("ETUDIANT", "ADMIN")
-                        .requestMatchers("/api/recommandation/**").hasAnyRole("ETUDIANT", "ADMIN")      // ← ajoute
+                        .requestMatchers("/api/recommandation/**").hasAnyRole("ETUDIANT", "ADMIN")
 
+                        // ✅ Tout le reste nécessite une authentification
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
