@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 
 import SujetsDisponibles from "./components/SujetsDisponibles";
@@ -14,6 +14,7 @@ import Login from "./Components/Login.jsx";
 import Register from "./Components/Register.jsx";
 import DashboardChef from "./Components/DasheboardChef.jsx";
 import DashboardProf from "./Components/DashebordProf.jsx";
+import Profiletudiant from "./Components/Profiletudiant.jsx";
 
 import "./App.css";
 
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { num: 2, label: "Sujets", sub: "Parcourir & sélectionner", id: "sujets" },
   { num: 3, label: "Recommandations", sub: "Suggestions IA", id: "recommandations" },
   { num: 4, label: "Mes vœux", sub: "Ordre & soumission", id: "mes-choix" },
+  { num: 5, label: "Mon profil", sub: "Mes informations", id: "profil" },  // ← AJOUT
 ];
 
 const PAGE_META = {
@@ -29,9 +31,11 @@ const PAGE_META = {
   sujets: { title: "Sujets disponibles", sub: "Parcourir et sélectionner" },
   recommandations: { title: "Recommandations IA", sub: "Suggestions personnalisées" },
   "mes-choix": { title: "Mes vœux", sub: "Classement final" },
+  profil: { title: "Mon profil", sub: "Mes informations académiques" },
 };
 
 function DashboardEtudiant() {
+  const navigate = useNavigate();
   const [onglet, setOnglet] = useState("binome");
   const [choixActuels, setChoixActuels] = useState([]);
   const [nouveauSujet, setNouveauSujet] = useState(null);
@@ -97,6 +101,7 @@ function DashboardEtudiant() {
         <div className="sidebar-footer">
           <div className="footer-name">{etudiant.nom}</div>
           <div className="footer-binome">✓ Binôme: {binome ? "Associé" : "Non associé"}</div>
+
           <div className="footer-backend">v1.0 • API Active</div>
         </div>
       </aside>
@@ -143,6 +148,10 @@ function DashboardEtudiant() {
             onChoixChange={setChoixActuels}
           />
         )}
+
+        {onglet === "profil" && (
+          <Profiletudiant />
+        )}
       </main>
     </div>
   );
@@ -157,6 +166,7 @@ export default function App() {
       <Route path="/dashboard-chef" element={<DashboardChef />} />
       <Route path="/dashboard-prof" element={<DashboardProf />} />
       <Route path="/dashboard-etudiant" element={<DashboardEtudiant />} />
+
     </Routes>
   );
 }
