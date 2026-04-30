@@ -14,31 +14,36 @@ import Login from "./Components/Login.jsx";
 import Register from "./Components/Register.jsx";
 import DashboardChef from "./Components/DasheboardChef.jsx";
 import DashboardProf from "./Components/DashebordProf.jsx";
+import DashboardPage from "./components/DashboardPage";
+import ResultatsPage from "./components/ResultatsPage";
 
 import "./App.css";
 
 const NAV_ITEMS = [
+  { num: "⌂", label: "Accueil", sub: "Tableau de bord", id: "accueil" },
   { num: 1, label: "Mon binôme", sub: "Associer un partenaire", id: "binome" },
   { num: 2, label: "Sujets", sub: "Parcourir & sélectionner", id: "sujets" },
   { num: 3, label: "Recommandations", sub: "Suggestions IA", id: "recommandations" },
   { num: 4, label: "Mes vœux", sub: "Ordre & soumission", id: "mes-choix" },
+  { num: 5, label: "Résultats", sub: "Résultats & présence", id: "resultats" },
 ];
 
 const PAGE_META = {
+  accueil: { title: "Accueil", sub: "Tableau de bord" },
   binome: { title: "Mon binôme", sub: "Associez-vous à un partenaire" },
   sujets: { title: "Sujets disponibles", sub: "Parcourir et sélectionner" },
   recommandations: { title: "Recommandations IA", sub: "Suggestions personnalisées" },
   "mes-choix": { title: "Mes vœux", sub: "Classement final" },
+  resultats: { title: "Résultats", sub: "Résultats & présence" },
 };
 
 function DashboardEtudiant() {
-  const [onglet, setOnglet] = useState("binome");
+  const [onglet, setOnglet] = useState("accueil");
   const [choixActuels, setChoixActuels] = useState([]);
   const [nouveauSujet, setNouveauSujet] = useState(null);
   const [totalSujets, setTotalSujets] = useState(0);
   const [binome, setBinome] = useState(null);
 
-  // ← Récupère les vraies données depuis localStorage
   const userId = localStorage.getItem("userId");
   const userName = localStorage.getItem("userName") || "Étudiant";
 
@@ -58,7 +63,6 @@ function DashboardEtudiant() {
       .then((res) => setBinome(res.data))
       .catch((err) => {
         if (err.response?.status !== 404) console.error(err);
-        // 404 = pas de binôme, setBinome reste null
       });
   }, [userId]);
 
@@ -112,12 +116,15 @@ function DashboardEtudiant() {
           binome={binome}
         />
 
+       {onglet === "accueil" && (
+  <DashboardPage onNavigate={setOnglet} />)}
+
         {onglet === "binome" && (
           <Binome
             etudiant={etudiant}
             binome={binome}
             onBinomeFormed={setBinome}
-            onBinomeDissous={() => setBinome(null)} // ← ajoute
+            onBinomeDissous={() => setBinome(null)}
           />
         )}
 
@@ -138,11 +145,14 @@ function DashboardEtudiant() {
 
         {onglet === "mes-choix" && (
           <ChoixSujets
-            etudiantId={userId} // ← vrai ID
+            etudiantId={userId}
             nouveauSujet={nouveauSujet}
             onChoixChange={setChoixActuels}
           />
         )}
+
+        {onglet === "resultats" && (
+  <ResultatsPage />)}
       </main>
     </div>
   );

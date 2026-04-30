@@ -33,9 +33,14 @@ export default function StatsBar({ totalSujets, totalChoix, moyenne, binome }) {
         {binome ? (
           <>
             <div className="stat-value green" style={{ fontSize: 14, marginTop: 4 }}>
-              {binome.partenaire.nom}
+              {binome.partenaire?.nom
+                ?? binome.etudiant1?.nom
+                ?? binome.etudiant2?.nom
+                ?? 'Binôme actif'} {binome.partenaire?.prenom ?? binome.etudiant?.prenom}
             </div>
-            <div className="stat-sub">Moy. commune · {binome.moyenneCommune?.toFixed(2)}/20</div>
+            <div className="stat-sub">
+              Moy. commune · {(binome.moyenneCommune ?? binome.moyenneBinome)?.toFixed(2)}/20
+            </div>
           </>
         ) : (
           <>

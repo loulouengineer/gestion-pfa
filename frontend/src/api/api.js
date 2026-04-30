@@ -19,3 +19,14 @@ export const getBinomeActuel = (etudiantId) => api.get(`/binomes/etudiant/${etud
 export const rechercherEtudiants   = (query) => api.get(`/etudiants/recherche`, { params: { q: query } });
 export const formerBinome          = (etudiant1Id, etudiant2Id) => api.post(`/binomes`, { etudiant1Id, etudiant2Id });
 export const dissoudreBinome       = (binomeId) => api.delete(`/binomes/${binomeId}`);
+
+
+/* Résultats */
+export const getAllResultats  = async () => (await api.get('/resultats')).data;
+export const getStatistiques = async () => (await api.get('/resultats/statistiques')).data;
+export const deleteResultat  = async (id) => (await api.delete(`/resultats/${id}`)).data;
+
+export const exportPDF = () =>
+  window.open('http://localhost:8085/api/resultats/export/pdf', '_blank');
+export const exportExcel = () =>
+  window.open('http://localhost:8085/api/resultats/export/excel', '_blank');

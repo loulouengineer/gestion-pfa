@@ -1,10 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
-import {
-  rechercherEtudiants,
-  formerBinome,
-  dissoudreBinome,
-} from '../api/api';
+import { rechercherEtudiants, formerBinome, dissoudreBinome } from '../api/api';
 
 function initials(nom = '') {
   return nom.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
@@ -18,22 +14,29 @@ export default function Binome({ etudiant, binome, onBinomeFormed, onBinomeDisso
   const [loading, setLoading]         = useState(true);
   const [confirming, setConfirming]   = useState(false);
 
-useEffect(() => {
-  const userId = localStorage.getItem("userId");
-  api.get(`/binomes/etudiant/${userId}`)
-    .then((res) => { if (res.data) onBinomeFormed(res.data); })
-    .catch((err) => {
-      if (err.response?.status === 404) {
-        // Pas de binôme — c'est normal, on ignore
-        console.log("Pas de binôme pour cet étudiant");
-      } else {
-        console.error(err);
-      }
-    })
-    .finally(() => setLoading(false));
-}, [etudiant.id]);
+  // ✅ Fonction showMsg manquante — ajoutée ici
+  const showMsg = (text, type = 'info') => {
+    setMessage({ text, type });
+    setTimeout(() => setMessage(null), 4000);
+  };
 
-  
+  useEffect(() => {
+    // ✅ Utilise etudiant.id (prop) au lieu de localStorage qui peut être null
+    const userId = etudiant?.id ?? localStorage.getItem("userId");
+    if (!userId) { setLoading(false); return; }
+
+    api.get(`/binomes/etudiant/${userId}`)
+      .then((res) => { if (res.data) onBinomeFormed(res.data); })
+      .catch((err) => {
+        if (err.response?.status === 404) {
+          console.log("Pas de binôme pour cet étudiant");
+        } else {
+          console.error(err);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [etudiant?.id]);
+
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
     setSearching(true);
@@ -49,7 +52,7 @@ useEffect(() => {
 
   const handleFormer = async (partenaire) => {
     try {
-      const userId = localStorage.getItem("userId");
+      const userId = etudiant?.id ?? localStorage.getItem("userId");
       const res = await formerBinome(userId, partenaire.id);
       onBinomeFormed(res.data);
       showMsg(`Binôme formé avec ${partenaire.nom} !`, 'success');
@@ -74,7 +77,7 @@ useEffect(() => {
 
   if (loading) return <div className="loading-state">Chargement…</div>;
 
-  /* ── Binôme actif ── */
+  // ── Binôme actif ──
   if (binome) {
     return (
       <>
@@ -91,12 +94,12 @@ useEffect(() => {
           <div className="binome-members">
             <div className="binome-member">
               <span className="member-label">Vous</span>
-              <span className="member-name">{etudiant.nom}</span>
-              <span className="member-meta">{etudiant.matricule} · {etudiant.moyenne}/20</span>
+              <span className="member-name">{etudiant.nom} {binome.moi.prenom ?? etudiant.prenom}</span>
+              <span className="member-meta">{binome.moi?.matricule ?? etudiant.matricule} · {(binome.moi?.moyenne ?? etudiant.moyenne)}/20</span>
             </div>
             <div className="binome-member">
               <span className="member-label">Partenaire</span>
-              <span className="member-name">{binome.partenaire?.nom}</span>
+              <span className="member-name">{binome.partenaire?.nom} {binome.partenaire?.prenom}</span>
               <span className="member-meta">{binome.partenaire?.matricule} · {binome.partenaire?.moyenne}/20</span>
             </div>
           </div>
@@ -123,16 +126,16 @@ useEffect(() => {
     );
   }
 
-  /* ── Pas de binôme ── */
+  // ── Pas de binôme ──
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div className="binome-info-box">
           <p className="section-label" style={{ marginBottom: 14 }}>Comment ça marche</p>
           {[
-            { num: '1', title: 'Recherchez',   desc: 'Cherchez un camarade par nom ou matricule.' },
-            { num: '2', title: 'Choisissez',   desc: 'Cliquez sur "Former le binôme".' },
-            { num: '3', title: 'C\'est fait !', desc: 'Le binôme est immédiatement formé.' },
+            { num: '1', title: 'Recherchez',    desc: 'Cherchez un camarade par nom ou matricule.' },
+            { num: '2', title: 'Choisissez',    desc: 'Cliquez sur "Former le binôme".' },
+            { num: '3', title: "C'est fait !",  desc: 'Le binôme est immédiatement formé.' },
           ].map((s) => (
             <div key={s.num} style={{ display: 'flex', gap: 12, marginBottom: 14 }}>
               <div style={{
@@ -152,9 +155,9 @@ useEffect(() => {
         <div className="binome-info-box">
           <p className="section-label" style={{ marginBottom: 10 }}>Règles</p>
           {[
-            'Un étudiant ne peut appartenir qu\'à un seul binôme.',
+            "Un étudiant ne peut appartenir qu'à un seul binôme.",
             'Les deux membres soumettent leurs vœux ensemble.',
-            'La moyenne commune détermine la priorité d\'attribution.',
+            "La moyenne commune détermine la priorité d'attribution.",
             'La dissolution est possible avant la soumission des vœux.',
           ].map((r, i) => (
             <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, fontSize: 12, color: '#475569' }}>
@@ -171,7 +174,7 @@ useEffect(() => {
         <div className="binome-search-row" style={{ marginBottom: resultats.length ? 14 : 0 }}>
           <input
             className="search-input"
-            placeholder="Nom ou matricule…"
+            placeholder="Nom ou prenom ou matricule…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -193,7 +196,7 @@ useEffect(() => {
                   {initials(e.nom)}
                 </div>
                 <div>
-                  <div className="sujet-titre" style={{ fontSize: 13, marginBottom: 3 }}>{e.nom}</div>
+                  <div className="sujet-titre" style={{ fontSize: 13, marginBottom: 3 }}>{e.nom} {e.prenom}</div>
                   <div className="sujet-badges">
                     <span style={{ fontSize: 11, color: '#64748B' }}>{e.matricule}</span>
                     <span style={{ fontSize: 11, color: '#CBD5E1' }}>·</span>
