@@ -10,7 +10,8 @@ public class SujetDTO {
     public int difficulte;
     public boolean disponible;
     public boolean confirme;
-    public String professeur;       // nom affiché dans le front
+    public String statut;            // EN_ATTENTE | APPROUVE | REFUSE
+    public String professeur;        // nom affiché dans le front
     public List<String> technologies;
     public List<String> motsCles;
     public List<String> competences;
@@ -25,6 +26,7 @@ public class SujetDTO {
         dto.difficulte      = s.getDifficulte();
         dto.disponible      = s.isDisponible();
         dto.confirme        = s.isConfirme();
+        dto.statut          = s.getStatut() != null ? s.getStatut().name() : "EN_ATTENTE";
         dto.technologies    = s.getTechnologies();
         dto.motsCles        = s.getMotsCles();
         dto.competences     = s.getCompetences();

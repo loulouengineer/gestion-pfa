@@ -8,6 +8,7 @@ import api from "../api/axios";
 import CalendrierCreneaux from "./CalendrierCreneaux";
 import Planification      from "./Planification";
 import Chat               from "./Chat";
+import SujetsAcceptes     from "./SujetsAcceptes";
 
 /* ── Inline panels (no extra component files needed) ────────────────────── */
 
@@ -71,7 +72,7 @@ function SujetsPanel() {
               <div style={{ fontSize: 15, fontWeight: 700, color: "#e2e8f0", marginBottom: 4 }}>{s.titre}</div>
               <div style={{ fontSize: 12, color: "#64748b", marginBottom: 6 }}>{s.description}</div>
               <div style={{ fontSize: 11, color: "#475569" }}>
-                Proposé par : <span style={{ color: "#94a3b8" }}>{s.encadrant?.nom || "—"}</span>
+                Proposé par : <span style={{ color: "#94a3b8" }}>{s.professeur || "—"}</span>
                 {s.dateProposition && <span style={{ marginLeft: 10 }}>· {s.dateProposition}</span>}
               </div>
               {s.motsCles?.length > 0 && (
@@ -269,12 +270,13 @@ export default function DashboardChef() {
 
   const renderPage = () => {
     switch (page) {
-      case "sujets":        return <SujetsPanel />;
-      case "affectations":  return <AffectationsPanel />;
-      case "creneaux":      return <CalendrierCreneaux />;
-      case "soutenances":   return <Planification />;
-      case "messagerie":    return adminId ? <Chat adminId={adminId} /> : null;
-      case "notifications": return adminId ? <NotificationsPanel adminId={adminId} /> : null;
+      case "sujets":         return <SujetsPanel />;
+      case "sujets-valides": return <SujetsAcceptes />;
+      case "affectations":   return <AffectationsPanel />;
+      case "creneaux":       return <CalendrierCreneaux />;
+      case "soutenances":    return <Planification />;
+      case "messagerie":     return adminId ? <Chat adminId={adminId} /> : null;
+      case "notifications":  return adminId ? <NotificationsPanel adminId={adminId} /> : null;
       default:              return null;
     }
   };
