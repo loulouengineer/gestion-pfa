@@ -1,5 +1,6 @@
 package tn.enicarthage.projetspring.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
@@ -16,6 +17,7 @@ public class Professeur extends User {
     @Column(nullable = false)
     private String departement;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "encadrant", cascade = CascadeType.ALL)
     private List<Sujet> sujets;
 

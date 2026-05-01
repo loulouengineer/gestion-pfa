@@ -45,9 +45,13 @@ public class SujetService {
     }
 
     public List<Sujet> getMesSujets(String email) {
+        System.out.println(">>> getMesSujets appelé avec email: " + email);
         User enseignant = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
 
+
+        System.out.println(">>> Type: " + enseignant.getClass().getName());
+        System.out.println(">>> Est Professeur: " + (enseignant instanceof Professeur));
         if (!(enseignant instanceof Professeur)) {
             throw new RuntimeException("Utilisateur non autorisé");
         }

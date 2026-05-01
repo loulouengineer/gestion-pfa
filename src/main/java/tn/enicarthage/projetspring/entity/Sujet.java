@@ -1,5 +1,6 @@
 package tn.enicarthage.projetspring.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -57,6 +58,7 @@ public class Sujet {
     private LocalDate dateProposition;
 
     // ✅ Un seul champ — Professeur étend User, donc encadrant couvre les deux
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "enseignant_id")
     private Professeur encadrant;

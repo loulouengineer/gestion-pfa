@@ -10,10 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import tn.enicarthage.projetspring.dto.AuthResponse;
 import tn.enicarthage.projetspring.dto.LoginRequest;
 import tn.enicarthage.projetspring.dto.RegisterRequest;
-import tn.enicarthage.projetspring.entity.Etudiant;
-import tn.enicarthage.projetspring.entity.Role;
-import tn.enicarthage.projetspring.entity.StatutCompte;
-import tn.enicarthage.projetspring.entity.User;
+import tn.enicarthage.projetspring.entity.*;
 import tn.enicarthage.projetspring.repository.EtudiantRepository;
 import tn.enicarthage.projetspring.repository.UserRepository;
 import tn.enicarthage.projetspring.security.JwtUtil;
@@ -79,7 +76,6 @@ public class AuthService {
 
         return "Un email de réinitialisation a été envoyé.";
     }
-
     public String reinitialiserMotDePasse(String token, String nouveauMotDePasse) {
         User user = userRepository.findByTokenConfirmation(token)
                 .orElseThrow(() -> new RuntimeException("Token invalide ou expiré"));
@@ -119,27 +115,33 @@ public class AuthService {
             throw new RuntimeException("Email déjà utilisé");
         }
 
-
         String token = UUID.randomUUID().toString();
+        Role role = Role.valueOf(request.getRole());
 
-        User user = new User();
+        User user;
+
+        if (role == Role.ENSEIGNANT) {
+            Professeur prof = new Professeur();
+            prof.setDepartement("Non défini");
+            user = prof;
+        } else {
+            user = new User();
+        }
+
         user.setNom(request.getNom());
         user.setPrenom(request.getPrenom());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(Role.valueOf(request.getRole()));
+        user.setRole(role);
         user.setStatut(StatutCompte.EN_ATTENTE);
         user.setTokenConfirmation(token);
 
         userRepository.save(user);
-        System.out.println(">>> User sauvegardé, appel envoyerEmailChef...");
 
         try {
             envoyerEmailChef(user, token);
-            System.out.println(">>> Email envoyé avec succès !");
         } catch (Exception e) {
             System.out.println(">>> ERREUR envoi email : " + e.getMessage());
-            e.printStackTrace();
         }
 
         return "Votre demande a été envoyée. En attente de validation du chef de département.";
