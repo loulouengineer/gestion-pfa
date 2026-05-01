@@ -1,28 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api/axios';
 
 export default function DashboardPage({ onNavigate }) {
   const [data, setData] = useState({
-    statutGlobal: "Chargement...",
-    statutGlobalSub: "Veuillez patienter",
-    binomeStatus: "...",
-    binomeStatusSub: "...",
-    sujetStatus: "...",
-    sujetStatusSub: "...",
+    statutGlobal: "En cours",
+    statutGlobalSub: "Votre PFA est en cours",
+    binomeStatus: "—",
+    binomeStatusSub: "Vérification…",
+    sujetStatus: "—",
+    sujetStatusSub: "Vérification…",
     joursRestants: null,
-    joursRestantsSub: "...",
-    progressPercentage: 0,
+    joursRestantsSub: "Avant la soutenance",
+    progressPercentage: 10,
     currentStep: 1
   });
 
   useEffect(() => {
-    axios.get('http://localhost:8081/api/dashboard/1')
-      .then(response => {
-        setData(response.data);
-      })
-      .catch(error => {
-        console.error("Erreur lors du chargement du dashboard:", error);
-      });
+    const etudiantId = localStorage.getItem("userId");
+    if (!etudiantId) return;
+    api.get(`/dashboard/${etudiantId}`)
+      .then(response => { setData(response.data); })
+      .catch(() => {});
   }, []);
 
   return (
