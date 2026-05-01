@@ -1,7 +1,10 @@
 package tn.enicarthage.projetspring.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -16,8 +19,13 @@ public class Professeur extends User {
     @Column(nullable = false)
     private String departement;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "encadrant", cascade = CascadeType.ALL)
-    private List<Sujet> sujets;
+    @Builder.Default
+    private List<Sujet> sujets = new ArrayList<>();
 
-    // ❌ getPrenom() supprimé — hérité automatiquement via @Data de User
+    @JsonIgnore
+    @ManyToMany(mappedBy = "jury")
+    @Builder.Default
+    private List<Creneau> creneaux = new ArrayList<>();
 }

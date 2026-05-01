@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//mnt/c/Users/ASUS/Desktop/Sem2/**)",
+      "Bash(mvnw.cmd dependency:resolve -q)",
+      "Bash(curl -s \"https://repo1.maven.org/maven2/org/springframework/boot/spring-boot-starter-parent/maven-metadata.xml\")",
+      "Bash(mvnw.cmd compile *)",
+      "Bash(./mvnw compile *)",
+      "Bash(git stash *)",
+      "Bash(git add *)"
+    ]
+  }
+}
