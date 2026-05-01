@@ -3,7 +3,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { creneauApi } from "../api/api";
+import { creneauApi, professeurApi } from "../api/api";
 
 const SALLES = ["Salle A1", "Salle A2", "Salle B1", "Amphithéâtre"];
 
@@ -69,26 +69,43 @@ function ModalDetail({ creneau, onClose }) {
 }
 
 function FormulaireCreneaux({ onCreated, selectedDate }) {
-  const [form, setForm]       = useState({ date: "", heureDebut: "", dureeMinutes: "30", salle: "Salle A1" });
+  const [form, setForm]       = useState({ date: "", heureDebut: "", dureeMinutes: "45", salle: "Salle A1" });
+  const [profs, setProfs]     = useState([]);
+  const [juryIds, setJuryIds] = useState([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError]     = useState(null);
 
   useEffect(() => {
+    professeurApi.getAll().then(setProfs).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (selectedDate) setForm(p => ({ ...p, date: selectedDate }));
   }, [selectedDate]);
+
+  const toggleJury = (id) =>
+    setJuryIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.date || !form.heureDebut) { setError("Date et heure obligatoires."); return; }
+    if (juryIds.length < 2) { setError("Sélectionnez au moins 2 membres du jury."); return; }
     setLoading(true); setError(null);
     try {
-      await creneauApi.creer({ date: form.date, heureDebut: form.heureDebut + ":00", dureeMinutes: parseInt(form.dureeMinutes), salle: form.salle });
+      await creneauApi.creer({
+        date: form.date,
+        heureDebut: form.heureDebut + ":00",
+        dureeMinutes: parseInt(form.dureeMinutes),
+        salle: form.salle,
+        juryIds,
+      });
       setForm(p => ({ ...p, heureDebut: "" }));
+      setJuryIds([]);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 2000);
       onCreated();
-    } catch (e) { setError(e.message); }
+    } catch (e) { setError(e.message || "Erreur lors de la création."); }
     finally { setLoading(false); }
   };
 
@@ -98,19 +115,21 @@ function FormulaireCreneaux({ onCreated, selectedDate }) {
       <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 16 }}>Cliquez sur une date dans le calendrier pour la sélectionner</div>
 
       {error   && <div style={{ background: "#fee2e2", border: "1px solid #ef4444", color: "#991b1b", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 10 }}>{error}</div>}
-      {success && <div style={{ background: "#d1fae5", border: "1px solid #10b981", color: "#065f46", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 10, fontWeight: 500 }}>Créneau créé.</div>}
+      {success && <div style={{ background: "#d1fae5", border: "1px solid #10b981", color: "#065f46", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 10, fontWeight: 500 }}>Créneau créé avec jury.</div>}
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {[
-          { label: "Date",          node: <input type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} style={inputStyle} /> },
-          { label: "Heure de début",node: <input type="time" value={form.heureDebut} onChange={e => setForm(p => ({ ...p, heureDebut: e.target.value }))} style={inputStyle} /> },
-          { label: "Durée",         node: (
+          { label: "Date",           node: <input type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} style={inputStyle} /> },
+          { label: "Heure de début", node: <input type="time" value={form.heureDebut} onChange={e => setForm(p => ({ ...p, heureDebut: e.target.value }))} style={inputStyle} /> },
+          { label: "Durée",          node: (
             <select value={form.dureeMinutes} onChange={e => setForm(p => ({ ...p, dureeMinutes: e.target.value }))} style={inputStyle}>
-              <option value="20">20 min</option><option value="30">30 min</option>
-              <option value="45">45 min</option><option value="60">60 min</option>
+              <option value="20">20 min</option>
+              <option value="30">30 min</option>
+              <option value="45">45 min</option>
+              <option value="60">60 min</option>
             </select>
           )},
-          { label: "Salle",         node: (
+          { label: "Salle", node: (
             <select value={form.salle} onChange={e => setForm(p => ({ ...p, salle: e.target.value }))} style={inputStyle}>
               {SALLES.map(s => <option key={s}>{s}</option>)}
             </select>
@@ -121,6 +140,38 @@ function FormulaireCreneaux({ onCreated, selectedDate }) {
             {node}
           </div>
         ))}
+
+        {/* Jury selection */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          <label style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            Jury{" "}
+            <span style={{ color: juryIds.length < 2 ? "#ef4444" : "#10b981", fontWeight: 700 }}>
+              ({juryIds.length} sél.)
+            </span>
+          </label>
+          <div style={{ border: "1px solid var(--border2)", borderRadius: 8, maxHeight: 140, overflowY: "auto", background: "var(--surface2)" }}>
+            {profs.length === 0 ? (
+              <div style={{ padding: "10px 12px", fontSize: 12, color: "var(--muted)" }}>Chargement des professeurs…</div>
+            ) : profs.map(p => (
+              <label key={p.id} style={{
+                display: "flex", alignItems: "center", gap: 8,
+                padding: "7px 12px", cursor: "pointer",
+                background: juryIds.includes(p.id) ? "rgba(59,130,246,0.1)" : "transparent",
+                borderBottom: "1px solid var(--border)",
+              }}>
+                <input
+                  type="checkbox"
+                  checked={juryIds.includes(p.id)}
+                  onChange={() => toggleJury(p.id)}
+                  style={{ accentColor: "#3b82f6", width: 14, height: 14 }}
+                />
+                <span style={{ fontSize: 12, color: "var(--text)" }}>{p.nom} {p.prenom}</span>
+                <span style={{ fontSize: 10, color: "var(--muted)", marginLeft: "auto" }}>{p.departement}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
         <button type="submit" disabled={loading} style={{ marginTop: 4, padding: "10px", borderRadius: 8, border: "none", background: "#3b82f6", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: loading ? 0.6 : 1 }}>
           {loading ? "Création..." : "Créer le créneau"}
         </button>
@@ -194,7 +245,6 @@ export default function CalendrierCreneaux() {
         <h1 style={{ fontSize: 24, fontWeight: 600, color: "var(--text)", letterSpacing: "-0.4px" }}>Calendrier des créneaux</h1>
       </div>
 
-      {/* Stats + filtre */}
       <div style={{ display: "flex", gap: 12, marginBottom: 24, alignItems: "center", flexWrap: "wrap" }}>
         {[
           { label: "Total",       val: creneaux.length, bg: "#dbeafe", border: "#3b82f6", color: "#1e40af" },
