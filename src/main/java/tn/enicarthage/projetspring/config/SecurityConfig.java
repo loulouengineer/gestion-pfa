@@ -35,7 +35,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/etudiants/inscrire").permitAll()
                         .requestMatchers("/api/etudiants/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
-                        .requestMatchers("/api/choix/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
+                        .requestMatchers("/api/choix", "/api/choix/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
                         .requestMatchers("/api/sujets/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
                         .requestMatchers("/api/binomes/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
                         .requestMatchers("/api/recommandation/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
