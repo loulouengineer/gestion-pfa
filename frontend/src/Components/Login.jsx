@@ -89,7 +89,7 @@ export default function Login() {
         </div>
 
         <div className="forgot-password">
-          <a href="#">Mot de passe oublié ?</a>
+          <Link to="/mot-de-passe-oublie">Mot de passe oublié ?</Link>
         </div>
 
         <button className="login-btn"

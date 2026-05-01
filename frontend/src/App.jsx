@@ -15,6 +15,8 @@ import Register from "./Components/Register.jsx";
 import DashboardChef from "./Components/DasheboardChef.jsx";
 import DashboardProf from "./Components/DashebordProf.jsx";
 import Profiletudiant from "./Components/Profiletudiant.jsx";
+import ForgetPassword from "./Components/ForgetPassword.jsx";
+import ResetPassword from "./Components/ResetPassword.jsx";
 
 import "./App.css";
 
@@ -163,6 +165,8 @@ export default function App() {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/mot-de-passe-oublie" element={<ForgetPassword />} />
+      <Route path="/reinitialiser-mdp" element={<ResetPassword />} />
       <Route path="/dashboard-chef" element={<DashboardChef />} />
       <Route path="/dashboard-prof" element={<DashboardProf />} />
       <Route path="/dashboard-etudiant" element={<DashboardEtudiant />} />
