@@ -31,12 +31,13 @@ export default function Login() {
         response = await api.post("/auth/login-etudiant", { email, password });
       }
 
-      const { token, role, nom, id } = response.data;
-
+      const { token, role, nom, id, moyenne, matricule } = response.data;
       localStorage.setItem("token", token);
       localStorage.setItem("role", role);
       localStorage.setItem("userName", nom);
       localStorage.setItem("userId", id);
+      if (moyenne) localStorage.setItem("moyenne", moyenne);
+      if (matricule) localStorage.setItem("matricule", matricule);
    
 
 

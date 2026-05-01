@@ -57,6 +57,9 @@ const Register = () => {
         localStorage.setItem("token", loginResponse.data.token);
         localStorage.setItem("role", loginResponse.data.role);
         localStorage.setItem("userName", loginResponse.data.nom);
+        localStorage.setItem("userId", loginResponse.data.id);
+        localStorage.setItem("moyenne", moyenne);
+        localStorage.setItem("matricule", loginResponse.data.matricule || "");
         navigate("/dashboard-etudiant");
 
       } else {
@@ -72,6 +75,7 @@ const Register = () => {
         localStorage.setItem("token", response.data.token);
         localStorage.setItem("role", response.data.role);
         localStorage.setItem("userName", response.data.nom);
+        localStorage.setItem("userId", response.data.id);
 
         if (response.data.role === "ENSEIGNANT") {
           navigate("/dashboard-prof");

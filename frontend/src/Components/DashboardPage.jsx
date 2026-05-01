@@ -15,13 +15,29 @@ export default function DashboardPage({ onNavigate }) {
   });
 
   useEffect(() => {
-    api.get('/dashboard/1')
+    // Lire l'ID étudiant depuis localStorage (sauvegardé lors du login)
+    const etudiantId = localStorage.getItem('etudiantId') || localStorage.getItem('userId');
+    if (!etudiantId) {
+      console.warn("Aucun etudiantId trouvé dans localStorage");
+      setData(prev => ({
+        ...prev,
+        statutGlobal: "Non connecté",
+        statutGlobalSub: "Veuillez vous connecter",
+      }));
+      return;
+    }
+    api.get(`/dashboard/${etudiantId}`)
       .then(response => {
-        console.log("Données reçues :", response.data);
+        console.log("Données dashboard reçues :", response.data);
         setData(response.data);
       })
       .catch(error => {
-        console.error("Erreur:", error.response?.status, error.message);
+        console.error("Erreur dashboard:", error.response?.status, error.message);
+        setData(prev => ({
+          ...prev,
+          statutGlobal: "Erreur",
+          statutGlobalSub: "Impossible de charger les données",
+        }));
       });
   }, []);
 

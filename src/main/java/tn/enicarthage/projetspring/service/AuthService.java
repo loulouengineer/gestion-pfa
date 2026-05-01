@@ -67,6 +67,6 @@ public class AuthService {
         }
 
         String token = jwtUtil.generateToken(etudiant.getEmail(), "ETUDIANT");
-        return new AuthResponse(token, "ETUDIANT", etudiant.getNom(), etudiant.getId());
+        return new AuthResponse(token, "ETUDIANT", etudiant.getNom(), etudiant.getId(), (double)etudiant.getMoyenne(), etudiant.getMatricule());
     }
 }

@@ -40,6 +40,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/binomes/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
                         .requestMatchers("/api/recommandation/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
                         .requestMatchers("/api/recommandation-ia/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
+                        .requestMatchers("/api/dashboard/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
+                        .requestMatchers("/api/resultats/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
