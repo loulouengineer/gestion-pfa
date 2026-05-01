@@ -54,8 +54,8 @@ public class DataInitializer {
             PasswordEncoder      passwordEncoder) {
 
         return args -> {
-            // Skip si déjà initialisé
-            if (etudiantRepository.count() > 0) {
+            // Skip si les données de test spécifiques existent déjà
+            if (etudiantRepository.existsByEmail("y.bensalah@etu.enicar.tn")) {
                 System.out.println("ℹ️  Données de test déjà présentes — initialisation ignorée.");
                 return;
             }

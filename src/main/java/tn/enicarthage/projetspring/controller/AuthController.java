@@ -1,13 +1,14 @@
 package tn.enicarthage.projetspring.controller;
 
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import tn.enicarthage.projetspring.dto.AuthResponse;
 import tn.enicarthage.projetspring.dto.LoginRequest;
 import tn.enicarthage.projetspring.dto.RegisterRequest;
 import tn.enicarthage.projetspring.service.AuthService;
-import jakarta.validation.Valid;
 
 import java.util.Map;
 
@@ -18,40 +19,62 @@ public class AuthController {
     @Autowired
     private AuthService authService;
 
-    // 🆕 Retourne String au lieu de AuthResponse (pas de token avant validation)
     @PostMapping("/register")
-    public ResponseEntity<String> register(@Valid @RequestBody RegisterRequest request) {
-        return ResponseEntity.ok(authService.register(request));
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
+        try {
+            return ResponseEntity.ok(authService.register(request));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        }
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
-        return ResponseEntity.ok(authService.login(request));
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+        try {
+            AuthResponse response = authService.login(request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", ex.getMessage()));
+        }
     }
 
     @PostMapping("/login-etudiant")
-    public ResponseEntity<AuthResponse> loginEtudiant(@RequestBody LoginRequest request) {
-        return ResponseEntity.ok(authService.loginEtudiant(request));
+    public ResponseEntity<?> loginEtudiant(@RequestBody LoginRequest request) {
+        try {
+            AuthResponse response = authService.loginEtudiant(request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", ex.getMessage()));
+        }
     }
 
-    // 🆕 Endpoint cliqué depuis l'email du chef
     @GetMapping("/confirmer")
-    public ResponseEntity<String> confirmerCompte(
-            @RequestParam String token,
-            @RequestParam String action) {
-        return ResponseEntity.ok(authService.confirmerCompte(token, action));
-
-
-
+    public ResponseEntity<?> confirmerCompte(@RequestParam String token,
+                                              @RequestParam String action) {
+        try {
+            return ResponseEntity.ok(authService.confirmerCompte(token, action));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        }
     }
 
     @PostMapping("/mot-de-passe-oublie")
-    public ResponseEntity<String> motDePasseOublie(@RequestBody Map<String, String> body) {
-        return ResponseEntity.ok(authService.demanderReinitialisationMotDePasse(body.get("email")));
+    public ResponseEntity<?> motDePasseOublie(@RequestBody Map<String, String> body) {
+        try {
+            return ResponseEntity.ok(authService.demanderReinitialisationMotDePasse(body.get("email")));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        }
     }
 
     @PostMapping("/reinitialiser-mdp")
-    public ResponseEntity<String> reinitialiserMdp(@RequestBody Map<String, String> body) {
-        return ResponseEntity.ok(authService.reinitialiserMotDePasse(body.get("token"), body.get("motDePasse")));
+    public ResponseEntity<?> reinitialiserMdp(@RequestBody Map<String, String> body) {
+        try {
+            return ResponseEntity.ok(authService.reinitialiserMotDePasse(body.get("token"), body.get("motDePasse")));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        }
     }
 }

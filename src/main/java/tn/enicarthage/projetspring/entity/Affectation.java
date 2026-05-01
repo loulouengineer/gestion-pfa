@@ -21,7 +21,7 @@ public class Affectation {
     @JoinColumn(name = "binome_id", nullable = false, unique = true)
     private Binome binome;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "sujet_id", nullable = false)
     private Sujet sujet;
 
