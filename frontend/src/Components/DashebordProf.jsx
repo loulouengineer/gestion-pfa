@@ -57,7 +57,7 @@ export default function DashboardProf() {
 
   const handleDeleteSujet = async (id) => {
     try {
-      await api.delete(`/api/sujets/${id}`);
+      await api.delete(`/sujets/${id}`);
       fetchSujets();
     } catch (err) {
       console.error(err);

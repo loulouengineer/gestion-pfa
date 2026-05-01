@@ -13,10 +13,10 @@ import java.net.http.HttpResponse;
 @Service
 public class OllamaService {
 
-    @Value("${ollama.url}")
+    @Value("${ollama.url:http://localhost:11434}")
     private String ollamaUrl;
 
-    @Value("${ollama.model}")
+    @Value("${ollama.model:gemma2:2b}")
     private String model;
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
