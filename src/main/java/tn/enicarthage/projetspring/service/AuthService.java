@@ -49,6 +49,47 @@ public class AuthService {
     @Value("${spring.mail.username}")
     private String fromEmail;
 
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
+
+
+    public String demanderReinitialisationMotDePasse(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Aucun compte trouvé avec cet email"));
+
+        String token = UUID.randomUUID().toString();
+        user.setTokenConfirmation(token);
+        userRepository.save(user);
+
+        String lien = frontendUrl + "/reinitialiser-mdp?token=" + token;
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(user.getEmail());
+        message.setSubject("Réinitialisation de votre mot de passe");
+        message.setText(
+                "Bonjour " + user.getNom() + ",\n\n" +
+                        "Cliquez sur le lien suivant pour réinitialiser votre mot de passe :\n\n" +
+                        lien + "\n\n" +
+                        "Ce lien est valable une seule fois.\n\n" +
+                        "Si vous n'avez pas fait cette demande, ignorez cet email.\n\n" +
+                        "Cordialement."
+        );
+        mailSender.send(message);
+
+        return "Un email de réinitialisation a été envoyé.";
+    }
+
+    public String reinitialiserMotDePasse(String token, String nouveauMotDePasse) {
+        User user = userRepository.findByTokenConfirmation(token)
+                .orElseThrow(() -> new RuntimeException("Token invalide ou expiré"));
+
+        user.setPassword(passwordEncoder.encode(nouveauMotDePasse));
+        user.setTokenConfirmation(null);
+        userRepository.save(user);
+
+        return "Mot de passe réinitialisé avec succès !";
+    }
 
 
     private static final List<String> MOTS_INTERDITS = List.of(

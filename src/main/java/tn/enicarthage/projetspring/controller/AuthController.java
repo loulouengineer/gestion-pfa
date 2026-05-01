@@ -9,6 +9,8 @@ import tn.enicarthage.projetspring.dto.RegisterRequest;
 import tn.enicarthage.projetspring.service.AuthService;
 import jakarta.validation.Valid;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -38,5 +40,18 @@ public class AuthController {
             @RequestParam String token,
             @RequestParam String action) {
         return ResponseEntity.ok(authService.confirmerCompte(token, action));
+
+
+
+    }
+
+    @PostMapping("/mot-de-passe-oublie")
+    public ResponseEntity<String> motDePasseOublie(@RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(authService.demanderReinitialisationMotDePasse(body.get("email")));
+    }
+
+    @PostMapping("/reinitialiser-mdp")
+    public ResponseEntity<String> reinitialiserMdp(@RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(authService.reinitialiserMotDePasse(body.get("token"), body.get("motDePasse")));
     }
 }

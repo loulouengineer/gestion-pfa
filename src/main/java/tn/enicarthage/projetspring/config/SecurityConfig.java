@@ -38,19 +38,21 @@ public class SecurityConfig {
                                 "/api/auth/login-etudiant",
                                 "/api/auth/register",
                                 "/api/auth/confirmer",
-                                "/api/etudiants/inscrire"
+                                "/api/etudiants/inscrire",
+                                "/api/auth/mot-de-passe-oublie",   // ← AJOUT
+                                "/api/auth/reinitialiser-mdp"
                         ).permitAll()
 
-                        // ✅ Reste de /api/auth/** (si besoin)
+                        //  Reste de /api/auth/** (si besoin)
                         .requestMatchers("/api/auth/**").permitAll()
 
-                        // ✅ Endpoints étudiants
+                        //  Endpoints étudiants
                         .requestMatchers("/api/sujets/disponibles").hasAnyRole("ETUDIANT", "ADMIN")
                         .requestMatchers("/api/binomes/par-etudiant/**").hasAnyRole("ETUDIANT", "ADMIN")
                         .requestMatchers("/api/binomes/**").hasAnyRole("ETUDIANT", "ADMIN")
                         .requestMatchers("/api/recommandation/**").hasAnyRole("ETUDIANT", "ADMIN")
 
-                        // ✅ Tout le reste nécessite une authentification
+                        //  Tout le reste nécessite une authentification
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
