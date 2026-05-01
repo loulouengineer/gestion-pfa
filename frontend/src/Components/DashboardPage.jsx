@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-
+import api from "../api/axios";
 export default function DashboardPage({ onNavigate }) {
   const [data, setData] = useState({
     statutGlobal: "Chargement...",
@@ -16,12 +15,13 @@ export default function DashboardPage({ onNavigate }) {
   });
 
   useEffect(() => {
-    axios.get('http://localhost:8081/api/dashboard/1')
+    api.get('/dashboard/1')
       .then(response => {
+        console.log("Données reçues :", response.data);
         setData(response.data);
       })
       .catch(error => {
-        console.error("Erreur lors du chargement du dashboard:", error);
+        console.error("Erreur:", error.response?.status, error.message);
       });
   }, []);
 

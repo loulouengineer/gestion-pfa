@@ -47,12 +47,13 @@ function DashboardEtudiant() {
   const userId = localStorage.getItem("userId");
   const userName = localStorage.getItem("userName") || "Étudiant";
 
-  const etudiant = {
-    id: userId,
-    nom: userName,
-    matricule: localStorage.getItem("matricule") || "",
-    moyenne: parseFloat(localStorage.getItem("moyenne")) || 0,
-  };
+const raw = localStorage.getItem("moyenne");
+const etudiant = {
+  id: userId,
+  nom: userName,
+  matricule: localStorage.getItem("matricule") || "",
+  moyenne: raw !== null ? parseFloat(raw) : null,
+};
 
   useEffect(() => {
     getSujetsDisponibles()

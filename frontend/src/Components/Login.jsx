@@ -37,6 +37,8 @@ export default function Login() {
       localStorage.setItem("role", role);
       localStorage.setItem("userName", nom);
       localStorage.setItem("userId", id);
+   
+
 
       if (role === "ENSEIGNANT") navigate("/dashboard-prof");
       else if (role === "CHEF_DEPT") navigate("/dashboard-chef");

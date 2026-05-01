@@ -24,7 +24,9 @@ export default function StatsBar({ totalSujets, totalChoix, moyenne, binome }) {
 
       <div className="stat-card">
         <span className="stat-label">Ma moyenne</span>
-        <div className="stat-value orange">{moyenne}</div>
+        <div className="stat-value orange">
+  {moyenne !== null && moyenne !== undefined ? moyenne : 'N/A'}
+</div>
         <div className="stat-sub">sur 20</div>
       </div>
 
