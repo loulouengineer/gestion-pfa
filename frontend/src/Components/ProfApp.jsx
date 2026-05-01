@@ -1,43 +1,48 @@
 import { useState, useEffect } from "react";
-import { LogOut, ChevronRight } from "lucide-react";
-import { PROF_NAV } from "../nav/prof.js";
-import { notificationApi, chatApi } from "../api/api";
-
-import ProfDashboard      from "./ProfDashboard";
-import ProfSujets         from "./ProfSujets";
+import { Calendar, MessageCircle, BookOpen, ClipboardList, LogOut, ChevronRight } from "lucide-react";
+import { chatApi } from "../api/api";
 import ProfSoutenances    from "./ProfSoutenances";
 import ProfDisponibilites from "./ProfDisponibilites";
+import DashebordProf      from "./DashebordProf";
 import ProfChat           from "./ProfChat";
-import ProfNotifications  from "./ProfNotifications";
 
-const POLL_MS = 10000;
+const POLL_MS = 8000;
 
-function NavItem({ item, active, onClick, badge }) {
+const NAV = [
+  { id: "soutenances",    label: "Mes soutenances",    sub: "Jury & notes",         icon: ClipboardList },
+  { id: "disponibilites", label: "Mes disponibilités", sub: "Gérer mes plages",     icon: Calendar      },
+  { id: "sujets",         label: "Mes sujets",         sub: "Proposer & gérer",     icon: BookOpen      },
+  { id: "chat",           label: "Messagerie",         sub: "Chef de département",  icon: MessageCircle },
+];
+
+function NavItem({ item, active, onSelect, badge }) {
+  const isActive = active === item.id;
   const Icon = item.icon;
   return (
-    <button
-      onClick={() => onClick(item.id)}
+    <button onClick={() => onSelect(item.id)}
       style={{
         display: "flex", alignItems: "center", gap: 10,
         width: "100%", padding: "9px 10px", borderRadius: 10,
         border: "none", textAlign: "left", cursor: "pointer",
-        background: active ? "rgba(59,130,246,0.16)" : "transparent",
-        marginBottom: 2, transition: "background 0.15s", position: "relative",
+        background: isActive ? "rgba(59,130,246,0.16)" : "transparent",
+        marginBottom: 2, transition: "all 0.15s", position: "relative",
       }}
+      onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
+      onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
     >
-      {active && (
+      {isActive && (
         <div style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)", width: 3, height: 18, background: "#3b82f6", borderRadius: "0 3px 3px 0" }} />
       )}
       <div style={{
         width: 30, height: 30, borderRadius: 8, flexShrink: 0,
-        background: active ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.04)",
-        border: `1px solid ${active ? "rgba(59,130,246,0.4)" : "rgba(255,255,255,0.06)"}`,
+        background: isActive ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.04)",
+        border: `1px solid ${isActive ? "rgba(59,130,246,0.4)" : "rgba(255,255,255,0.06)"}`,
         display: "flex", alignItems: "center", justifyContent: "center",
       }}>
-        <Icon size={13} color={active ? "#60a5fa" : "#475569"} />
+        <Icon size={13} color={isActive ? "#60a5fa" : "#475569"} />
       </div>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 12, fontWeight: active ? 600 : 400, color: active ? "#e2e8f0" : "#64748b" }}>
+        <div style={{ fontSize: 12, fontWeight: isActive ? 600 : 400, color: isActive ? "#e2e8f0" : "#64748b" }}>
           {item.label}
         </div>
         <div style={{ fontSize: 10, color: "#334155" }}>{item.sub}</div>
@@ -47,91 +52,101 @@ function NavItem({ item, active, onClick, badge }) {
           {badge > 9 ? "9+" : badge}
         </span>
       )}
-      {active && !badge && <ChevronRight size={11} color="#3b82f6" />}
+      {isActive && !badge && <ChevronRight size={11} color="#3b82f6" />}
     </button>
   );
 }
 
 export default function ProfApp({ prof, onLogout }) {
-  const [active, setActive]         = useState("dashboard");
-  const [notifCount, setNotifCount] = useState(0);
+  const [active, setActive]         = useState("soutenances");
   const [chatUnread, setChatUnread] = useState(0);
 
   useEffect(() => {
-    if (!prof?.id) return;
-    const poll = async () => {
-      try {
-        const [n, c] = await Promise.all([
-          notificationApi.getUnreadCount(prof.id),
-          chatApi.getUnread(prof.id),
-        ]);
-        setNotifCount(n?.count || 0);
-        setChatUnread(c?.count || 0);
-      } catch {}
+    const fetch = async () => {
+      try { const c = await chatApi.getUnread(prof.id); setChatUnread(c.count || 0); } catch {}
     };
-    poll();
-    const iv = setInterval(poll, POLL_MS);
+    fetch();
+    const iv = setInterval(fetch, POLL_MS);
     return () => clearInterval(iv);
-  }, [prof?.id]);
+  }, [prof.id]);
 
-  const getBadge = (id) => {
-    if (id === "notifications") return notifCount;
-    if (id === "messagerie")    return chatUnread;
-    return 0;
-  };
-
-  const renderPage = () => {
-    switch (active) {
-      case "dashboard":     return <ProfDashboard prof={prof} onNavigate={setActive} />;
-      case "sujets":        return <ProfSujets prof={prof} />;
-      case "soutenances":   return <ProfSoutenances prof={prof} />;
-      case "disponibilites":return <ProfDisponibilites prof={prof} />;
-      case "messagerie":    return <ProfChat prof={prof} />;
-      case "notifications": return <ProfNotifications prof={prof} onRead={() => setNotifCount(0)} />;
-      default:              return null;
-    }
+  const handleSelect = (id) => {
+    setActive(id);
+    if (id === "chat") setChatUnread(0);
   };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg, #0f172a)" }}>
-      {/* Sidebar */}
+    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
       <aside style={{
-        width: 220, flexShrink: 0,
-        background: "var(--surface, #1e293b)",
-        borderRight: "1px solid rgba(255,255,255,0.06)",
+        width: 240, flexShrink: 0, background: "#0f172a",
         display: "flex", flexDirection: "column",
-        padding: "20px 12px",
-        position: "sticky", top: 0, height: "100vh", overflowY: "auto",
+        height: "100vh", position: "sticky", top: 0, overflow: "hidden",
       }}>
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: "#e2e8f0" }}>Gestion PFA</div>
-          <div style={{ fontSize: 10, color: "#475569", marginTop: 2 }}>Espace Enseignant</div>
-          <div style={{ fontSize: 11, color: "#3b82f6", marginTop: 6, fontWeight: 600 }}>{prof?.nom}</div>
+        {/* dot-grid texture */}
+        <div style={{
+          position: "absolute", inset: 0, opacity: 0.025,
+          backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.8) 1px, transparent 0)`,
+          backgroundSize: "24px 24px", pointerEvents: "none",
+        }} />
+
+        {/* Prof header */}
+        <div style={{ padding: "20px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", position: "relative", display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: "50%", flexShrink: 0,
+            background: "linear-gradient(135deg, #2563eb, #7c3aed)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 16, fontWeight: 700, color: "#fff",
+            boxShadow: "0 4px 12px rgba(37,99,235,0.35)",
+          }}>
+            {prof?.nom?.charAt(0) || "P"}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#f1f5f9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {prof?.nom || "Professeur"}
+            </div>
+            <div style={{ fontSize: 10, color: "#475569" }}>
+              {prof?.departement || "Enseignant"}
+            </div>
+          </div>
         </div>
 
-        <nav style={{ flex: 1 }}>
-          {PROF_NAV.map(item => (
-            <NavItem key={item.id} item={item} active={active === item.id} onClick={setActive} badge={getBadge(item.id)} />
+        <nav style={{ padding: "14px 10px", flex: 1, overflow: "auto" }}>
+          {NAV.map(item => (
+            <NavItem key={item.id} item={item} active={active}
+              onSelect={handleSelect}
+              badge={item.id === "chat" ? chatUnread : 0} />
           ))}
         </nav>
 
-        <button
-          onClick={onLogout}
-          style={{
-            display: "flex", alignItems: "center", gap: 8,
-            width: "100%", padding: "9px 10px", borderRadius: 10,
-            border: "none", cursor: "pointer", marginTop: 12,
-            background: "rgba(239,68,68,0.1)", color: "#f87171",
-            fontSize: 12, fontWeight: 500,
-          }}
-        >
-          <LogOut size={14} /> Déconnexion
-        </button>
+        <div style={{ padding: "12px 10px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+          <button onClick={onLogout}
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              width: "100%", padding: "8px 10px", borderRadius: 8,
+              border: "1px solid rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.06)",
+              cursor: "pointer", color: "#f87171", fontSize: 12, fontWeight: 600,
+              transition: "all 0.15s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.12)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(239,68,68,0.06)"; }}
+          >
+            <LogOut size={13} /> Se déconnecter
+          </button>
+        </div>
       </aside>
 
-      {/* Main */}
-      <main style={{ flex: 1, padding: "28px 32px", overflowY: "auto" }}>
-        {renderPage()}
+      <main style={{ flex: 1, overflow: "auto", padding: "40px 48px" }}>
+        <div style={{
+          position: "fixed", top: 0, right: 0, width: 700, height: 500,
+          pointerEvents: "none", zIndex: 0,
+          background: "radial-gradient(ellipse at 80% 0%, rgba(59,130,246,0.04) 0%, transparent 65%)",
+        }} />
+        <div style={{ position: "relative", zIndex: 1, maxWidth: 1000, margin: "0 auto" }}>
+          {active === "soutenances"    && <ProfSoutenances    prof={prof} />}
+          {active === "disponibilites" && <ProfDisponibilites prof={prof} />}
+          {active === "sujets"         && <DashebordProf />}
+          {active === "chat"           && <ProfChat           prof={prof} />}
+        </div>
       </main>
     </div>
   );

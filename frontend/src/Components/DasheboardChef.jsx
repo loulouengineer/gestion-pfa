@@ -1,308 +1,239 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { LogOut, ChevronRight } from "lucide-react";
-import { CHEF_NAV } from "../nav/chef.js";
-import { notificationApi, affectationApi } from "../api/api";
+import { useNavigate } from "react-router-dom";
+import { CHEF_NAV } from "../nav/chef";
+import { chatApi } from "../api/api";
 import api from "../api/axios";
 
+import SujetsAcceptes     from "./SujetsAcceptes";
+import DemandesSujets     from "./DemandesSujets";
 import CalendrierCreneaux from "./CalendrierCreneaux";
 import Planification      from "./Planification";
 import Chat               from "./Chat";
-import SujetsAcceptes     from "./SujetsAcceptes";
 
-/* ── Inline panels (no extra component files needed) ────────────────────── */
+import "./DasheboardChef.css";
 
-function SujetsPanel() {
-  const [tab, setTab]       = useState("EN_ATTENTE");
-  const [sujets, setSujets] = useState([]);
-  const [loading, setLoading] = useState(true);
+const POLL_MS = 10000;
 
-  const fetch = async () => {
-    setLoading(true);
-    try { const r = await api.get("/sujets"); setSujets(r.data); }
-    catch {}
-    finally { setLoading(false); }
-  };
-  useEffect(() => { fetch(); }, []);
-
-  const changerStatut = async (id, statut) => {
-    try { await api.patch(`/sujets/${id}/statut?statut=${statut}`); fetch(); }
-    catch {}
-  };
-
-  const filtered = sujets.filter(s => s.statut === tab);
-  const cnt = (st) => sujets.filter(s => s.statut === st).length;
-
-  const btnStyle = (active, color) => ({
-    padding: "7px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 500,
-    background: active ? color : "rgba(255,255,255,0.05)",
-    color: active ? "#fff" : "#94a3b8",
-  });
-
-  return (
-    <div>
-      <h2 style={{ fontSize: 18, fontWeight: 700, color: "#e2e8f0", marginBottom: 18 }}>Validation des sujets PFA</h2>
-
-      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-        {[
-          { label: "Total", val: sujets.length, color: "#6366f1" },
-          { label: "En attente", val: cnt("EN_ATTENTE"), color: "#f59e0b" },
-          { label: "Approuvés",  val: cnt("APPROUVE"),   color: "#10b981" },
-          { label: "Refusés",    val: cnt("REFUSE"),      color: "#ef4444" },
-        ].map(s => (
-          <div key={s.label} style={{ flex: 1, minWidth: 80, background: `${s.color}12`, border: `1px solid ${s.color}30`, borderRadius: 12, padding: "12px 16px" }}>
-            <div style={{ fontSize: 24, fontWeight: 800, color: s.color }}>{s.val}</div>
-            <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <button style={btnStyle(tab === "EN_ATTENTE", "#f59e0b")} onClick={() => setTab("EN_ATTENTE")}>En attente</button>
-        <button style={btnStyle(tab === "APPROUVE",   "#10b981")} onClick={() => setTab("APPROUVE")}>Approuvés</button>
-        <button style={btnStyle(tab === "REFUSE",     "#ef4444")} onClick={() => setTab("REFUSE")}>Refusés</button>
-      </div>
-
-      {loading ? <div style={{ color: "#64748b" }}>Chargement…</div>
-      : filtered.length === 0 ? <div style={{ color: "#64748b", padding: 20 }}>Aucun sujet.</div>
-      : filtered.map(s => (
-        <div key={s.id} style={{ background: "var(--surface, #1e293b)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "16px 20px", marginBottom: 10 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "#e2e8f0", marginBottom: 4 }}>{s.titre}</div>
-              <div style={{ fontSize: 12, color: "#64748b", marginBottom: 6 }}>{s.description}</div>
-              <div style={{ fontSize: 11, color: "#475569" }}>
-                Proposé par : <span style={{ color: "#94a3b8" }}>{s.professeur || "—"}</span>
-                {s.dateProposition && <span style={{ marginLeft: 10 }}>· {s.dateProposition}</span>}
-              </div>
-              {s.motsCles?.length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 8 }}>
-                  {s.motsCles.map((m, i) => (
-                    <span key={i} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, background: "rgba(99,102,241,0.15)", color: "#818cf8" }}>{m}</span>
-                  ))}
-                </div>
-              )}
-            </div>
-            {s.statut === "EN_ATTENTE" && (
-              <div style={{ display: "flex", gap: 8, flexShrink: 0, marginLeft: 16 }}>
-                <button onClick={() => changerStatut(s.id, "APPROUVE")} style={{ padding: "7px 14px", borderRadius: 8, border: "none", cursor: "pointer", background: "#10b981", color: "#fff", fontSize: 12, fontWeight: 600 }}>✔ Approuver</button>
-                <button onClick={() => changerStatut(s.id, "REFUSE")}   style={{ padding: "7px 14px", borderRadius: 8, border: "none", cursor: "pointer", background: "#ef4444", color: "#fff", fontSize: 12, fontWeight: 600 }}>✖ Refuser</button>
-              </div>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function AffectationsPanel() {
-  const [affectations, setAffectations] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [running, setRunning] = useState(false);
-  const [msg, setMsg]         = useState(null);
-
-  const fetch = async () => {
-    setLoading(true);
-    try { setAffectations(await affectationApi.getAll()); }
-    catch {}
-    finally { setLoading(false); }
-  };
-  useEffect(() => { fetch(); }, []);
-
-  const lancer = async () => {
-    setRunning(true); setMsg(null);
-    try {
-      const res = await affectationApi.lancerAlgorithme();
-      setMsg({ ok: true, text: `✔ ${res.length} affectations générées.` });
-      fetch();
-    } catch { setMsg({ ok: false, text: "Erreur lors de l'algorithme." }); }
-    finally { setRunning(false); }
-  };
-
-  const valider = (id) => affectationApi.valider(id).then(fetch).catch(() => {});
-  const refuser = async (id) => {
-    const c = prompt("Raison (optionnel) :") || "";
-    affectationApi.refuser(id, c).then(fetch).catch(() => {});
-  };
-
-  const color = { EN_ATTENTE: "#f59e0b", VALIDEE: "#10b981", REFUSEE: "#ef4444" };
-
-  return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: "#e2e8f0" }}>Affectations des sujets</h2>
-        <button onClick={lancer} disabled={running} style={{ padding: "9px 18px", borderRadius: 10, border: "none", cursor: "pointer", background: running ? "#334155" : "#6366f1", color: "#fff", fontWeight: 600, fontSize: 13 }}>
-          {running ? "⏳ En cours…" : "⚡ Lancer l'algorithme"}
-        </button>
-      </div>
-
-      {msg && (
-        <div style={{ padding: "10px 16px", borderRadius: 10, marginBottom: 16, background: msg.ok ? "#10b98120" : "#ef444420", border: `1px solid ${msg.ok ? "#10b981" : "#ef4444"}`, color: msg.ok ? "#10b981" : "#ef4444", fontSize: 13 }}>
-          {msg.text}
-        </div>
-      )}
-
-      {loading ? <div style={{ color: "#64748b" }}>Chargement…</div>
-      : affectations.length === 0 ? <div style={{ color: "#64748b", padding: 20 }}>Aucune affectation. Lancez l'algorithme.</div>
-      : affectations.map(a => (
-        <div key={a.id} style={{ background: "var(--surface, #1e293b)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "14px 18px", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0" }}>{a.binome?.etudiant1?.nom} & {a.binome?.etudiant2?.nom}</div>
-            <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
-              Sujet : <span style={{ color: "#94a3b8" }}>{a.sujet?.titre || "—"}</span>
-              <span style={{ marginLeft: 10 }}>Score : <b style={{ color: "#6366f1" }}>{a.score?.toFixed(1)}</b></span>
-            </div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20, fontWeight: 600, background: `${color[a.statut] || "#64748b"}20`, color: color[a.statut] || "#64748b" }}>{a.statut}</span>
-            {a.statut === "EN_ATTENTE" && (
-              <>
-                <button onClick={() => valider(a.id)} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: "#10b981", color: "#fff", fontSize: 11, fontWeight: 600 }}>Valider</button>
-                <button onClick={() => refuser(a.id)} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: "#ef4444", color: "#fff", fontSize: 11, fontWeight: 600 }}>Refuser</button>
-              </>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function NotificationsPanel({ adminId }) {
-  const [notifs, setNotifs] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetch = async () => {
-    setLoading(true);
-    try { setNotifs(await notificationApi.getAll(adminId)); }
-    catch {}
-    finally { setLoading(false); }
-  };
-  useEffect(() => { fetch(); }, [adminId]);
-
-  const marquer = async (id) => { await notificationApi.marquerLue(id); fetch(); };
-  const marquerToutes = async () => { await notificationApi.marquerToutes(adminId); fetch(); };
-
-  const typeColor = { INFO: "#6366f1", DEBUT_SOUTENANCE: "#3b82f6", FIN_SOUTENANCE: "#10b981", RAPPORT: "#f59e0b", AVERTISSEMENT: "#ef4444" };
-
-  return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: "#e2e8f0" }}>Notifications</h2>
-        {notifs.some(n => !n.lue) && (
-          <button onClick={marquerToutes} style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", cursor: "pointer", background: "transparent", color: "#94a3b8", fontSize: 12 }}>
-            Tout marquer comme lu
-          </button>
-        )}
-      </div>
-      {loading ? <div style={{ color: "#64748b" }}>Chargement…</div>
-      : notifs.length === 0 ? <div style={{ color: "#64748b", padding: 20 }}>Aucune notification.</div>
-      : notifs.map(n => (
-        <div key={n.id} onClick={() => !n.lue && marquer(n.id)} style={{
-          background: n.lue ? "var(--surface, #1e293b)" : "rgba(99,102,241,0.08)",
-          border: `1px solid ${n.lue ? "rgba(255,255,255,0.05)" : "rgba(99,102,241,0.25)"}`,
-          borderLeft: `3px solid ${typeColor[n.type] || "#6366f1"}`,
-          borderRadius: 12, padding: "14px 18px", marginBottom: 10,
-          cursor: n.lue ? "default" : "pointer",
-        }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>{n.titre}</span>
-            <span style={{ fontSize: 10, color: "#475569" }}>{new Date(n.date).toLocaleString("fr-FR")}</span>
-          </div>
-          <div style={{ fontSize: 12, color: "#94a3b8" }}>{n.message}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/* ── Main ChefApp ──────────────────────────────────────────────────────────── */
 function NavItem({ item, active, onClick, badge }) {
   const Icon = item.icon;
   return (
-    <button onClick={() => onClick(item.id)} style={{
-      display: "flex", alignItems: "center", gap: 10,
-      width: "100%", padding: "9px 10px", borderRadius: 10,
-      border: "none", textAlign: "left", cursor: "pointer",
-      background: active ? "rgba(99,102,241,0.18)" : "transparent",
-      marginBottom: 2, transition: "background 0.15s", position: "relative",
-    }}>
-      {active && <div style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)", width: 3, height: 18, background: "#6366f1", borderRadius: "0 3px 3px 0" }} />}
-      <div style={{ width: 30, height: 30, borderRadius: 8, flexShrink: 0, background: active ? "rgba(99,102,241,0.28)" : "rgba(255,255,255,0.04)", border: `1px solid ${active ? "rgba(99,102,241,0.4)" : "rgba(255,255,255,0.06)"}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <Icon size={13} color={active ? "#818cf8" : "#475569"} />
+    <button
+      onClick={() => onClick(item.id)}
+      style={{
+        display: "flex", alignItems: "center", gap: 10,
+        width: "100%", padding: "9px 10px", borderRadius: 10,
+        border: "none", textAlign: "left", cursor: "pointer",
+        background: active ? "rgba(59,130,246,0.16)" : "transparent",
+        marginBottom: 2, transition: "background 0.15s", position: "relative",
+      }}
+    >
+      {active && (
+        <div style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)", width: 3, height: 18, background: "#3b82f6", borderRadius: "0 3px 3px 0" }} />
+      )}
+      <div style={{
+        width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+        background: active ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.04)",
+        border: `1px solid ${active ? "rgba(59,130,246,0.4)" : "rgba(255,255,255,0.06)"}`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <Icon size={13} color={active ? "#60a5fa" : "#475569"} />
       </div>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 12, fontWeight: active ? 600 : 400, color: active ? "#e2e8f0" : "#64748b" }}>{item.label}</div>
+        <div style={{ fontSize: 12, fontWeight: active ? 600 : 400, color: active ? "#e2e8f0" : "#64748b" }}>
+          {item.label}
+        </div>
         <div style={{ fontSize: 10, color: "#334155" }}>{item.sub}</div>
       </div>
-      {badge > 0 && <span style={{ minWidth: 16, height: 16, borderRadius: 20, padding: "0 4px", background: "#ef4444", color: "#fff", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{badge > 9 ? "9+" : badge}</span>}
-      {active && !badge && <ChevronRight size={11} color="#6366f1" />}
+      {badge > 0 && (
+        <span style={{ minWidth: 16, height: 16, borderRadius: 20, padding: "0 4px", background: "#ef4444", color: "#fff", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {badge > 9 ? "9+" : badge}
+        </span>
+      )}
+      {active && !badge && <ChevronRight size={11} color="#3b82f6" />}
     </button>
   );
 }
 
+/* ── Sujets validation tab (Wiem's feature) ─────────────────────────────── */
+function SujetsValidation() {
+  const [activeTab, setActiveTab] = useState("EN_ATTENTE");
+  const [sujets, setSujets] = useState([]);
+
+  useEffect(() => { fetchSujets(); }, []);
+
+  const fetchSujets = async () => {
+    try {
+      const response = await api.get("/sujets");
+      setSujets(response.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleChangerStatut = async (id, statut) => {
+    try {
+      await api.patch(`/sujets/${id}/statut`, null, { params: { statut } });
+      fetchSujets();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const total      = sujets.length;
+  const en_attente = sujets.filter(s => s.statut === "EN_ATTENTE").length;
+  const approuve   = sujets.filter(s => s.statut === "APPROUVE").length;
+  const refuse     = sujets.filter(s => s.statut === "REFUSE").length;
+  const filtered   = sujets.filter(s => s.statut === activeTab);
+
+  return (
+    <div className="chef-container">
+      <div className="chef-stats">
+        <div className="chef-stat"><p>Total</p><h2>{total}</h2></div>
+        <div className="chef-stat"><p>En attente</p><h2 style={{color:"orange"}}>{en_attente}</h2></div>
+        <div className="chef-stat"><p>Approuvés</p><h2 style={{color:"green"}}>{approuve}</h2></div>
+        <div className="chef-stat"><p>Refusés</p><h2 style={{color:"red"}}>{refuse}</h2></div>
+      </div>
+
+      <div className="chef-tabs">
+        <Tab label={`⏱ En attente (${en_attente})`} active={activeTab==="EN_ATTENTE"} onClick={()=>setActiveTab("EN_ATTENTE")} />
+        <Tab label={`✓ Approuvés (${approuve})`}    active={activeTab==="APPROUVE"}   onClick={()=>setActiveTab("APPROUVE")}   />
+        <Tab label={`⊗ Refusés (${refuse})`}        active={activeTab==="REFUSE"}     onClick={()=>setActiveTab("REFUSE")}     />
+      </div>
+
+      <div>
+        {filtered.length > 0 ? (
+          filtered.map(p => (
+            <ProjetCard key={p.id} projet={p} onChangerStatut={handleChangerStatut} />
+          ))
+        ) : (
+          <p className="chef-empty">Aucun sujet</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ProjetCard({ projet, onChangerStatut }) {
+  return (
+    <div className="chef-card">
+      <h2>{projet.titre}</h2>
+      <p>{projet.description}</p>
+      <p className="chef-proposer">
+        <b>Proposé par :</b> {projet.professeur || projet.enseignant?.nom || "Inconnu"}
+      </p>
+      <p className="chef-card-label">Mots-clés :</p>
+      <div className="chef-tags">
+        {projet.motsCles?.map((m,i) => <span key={i} className="chef-tag">{m}</span>)}
+      </div>
+      <p className="chef-card-label">Compétences requises :</p>
+      <div className="chef-tags">
+        {projet.competences?.map((c,i) => <span key={i} className="chef-tag">{c}</span>)}
+      </div>
+      <p className="chef-date">Date de proposition : {projet.dateProposition}</p>
+      {projet.statut === "EN_ATTENTE" && (
+        <div className="chef-actions">
+          <button className="chef-btn chef-btn-green" onClick={()=>onChangerStatut(projet.id,"APPROUVE")}>
+            ✔ Approuver
+          </button>
+          <button className="chef-btn chef-btn-red" onClick={()=>onChangerStatut(projet.id,"REFUSE")}>
+            ✖ Refuser
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Tab({ label, active, onClick }) {
+  return (
+    <button className={active ? "chef-tab active" : "chef-tab"} onClick={onClick}>
+      {label}
+    </button>
+  );
+}
+
+/* ── Main chef app ───────────────────────────────────────────────────────── */
 export default function DashboardChef() {
-  const [page, setPage]           = useState("sujets");
-  const [userName, setUserName]   = useState("Chef");
-  const [adminId, setAdminId]     = useState(null);
-  const [notifCount, setNotifCount] = useState(0);
+  const [active, setActive]         = useState("sujets");
+  const [userName, setUserName]     = useState("Chef");
+  const [chatUnread, setChatUnread] = useState(0);
+  const chefId = parseInt(localStorage.getItem("userId") || "1");
   const navigate = useNavigate();
 
   useEffect(() => {
-    setUserName(localStorage.getItem("userName") || "Chef");
-    const id = localStorage.getItem("userId");
-    if (id) setAdminId(Number(id));
+    const storedName = localStorage.getItem("userName");
+    if (storedName) setUserName(storedName);
   }, []);
 
   useEffect(() => {
-    if (!adminId) return;
     const poll = async () => {
-      try { const r = await notificationApi.getUnreadCount(adminId); setNotifCount(r?.count || 0); }
-      catch {}
+      try {
+        const c = await chatApi.getUnread(chefId);
+        setChatUnread(c?.count || 0);
+      } catch {}
     };
     poll();
-    const iv = setInterval(poll, 15000);
+    const iv = setInterval(poll, POLL_MS);
     return () => clearInterval(iv);
-  }, [adminId]);
+  }, [chefId]);
 
-  const handleLogout = () => { localStorage.clear(); navigate("/login"); };
+  const getBadge = (id) => {
+    if (id === "messagerie") return chatUnread;
+    return 0;
+  };
 
   const renderPage = () => {
-    switch (page) {
-      case "sujets":         return <SujetsPanel />;
+    switch (active) {
+      case "sujets":         return <SujetsValidation />;
       case "sujets-valides": return <SujetsAcceptes />;
-      case "affectations":   return <AffectationsPanel />;
+      case "affectations":   return <DemandesSujets />;
       case "creneaux":       return <CalendrierCreneaux />;
       case "soutenances":    return <Planification />;
-      case "messagerie":     return adminId ? <Chat adminId={adminId} /> : null;
-      case "notifications":  return adminId ? <NotificationsPanel adminId={adminId} /> : null;
-      default:              return null;
+      case "messagerie":     return <Chat />;
+      default:               return null;
     }
   };
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg, #0f172a)" }}>
-      <aside style={{ width: 220, flexShrink: 0, background: "var(--surface, #1e293b)", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", padding: "20px 12px", position: "sticky", top: 0, height: "100vh", overflowY: "auto" }}>
+      {/* Sidebar */}
+      <aside style={{
+        width: 220, flexShrink: 0,
+        background: "var(--surface, #1e293b)",
+        borderRight: "1px solid rgba(255,255,255,0.06)",
+        display: "flex", flexDirection: "column",
+        padding: "20px 12px",
+        position: "sticky", top: 0, height: "100vh", overflowY: "auto",
+      }}>
         <div style={{ marginBottom: 24 }}>
           <div style={{ fontSize: 14, fontWeight: 800, color: "#e2e8f0" }}>Gestion PFA</div>
-          <div style={{ fontSize: 10, color: "#475569", marginTop: 2 }}>Chef de département</div>
-          <div style={{ fontSize: 11, color: "#6366f1", marginTop: 6, fontWeight: 600 }}>{userName}</div>
+          <div style={{ fontSize: 10, color: "#475569", marginTop: 2 }}>Espace Chef de Département</div>
+          <div style={{ fontSize: 11, color: "#3b82f6", marginTop: 6, fontWeight: 600 }}>{userName}</div>
         </div>
 
         <nav style={{ flex: 1 }}>
           {CHEF_NAV.map(item => (
-            <NavItem key={item.id} item={item} active={page === item.id} onClick={setPage}
-              badge={item.id === "notifications" ? notifCount : 0} />
+            <NavItem key={item.id} item={item} active={active === item.id} onClick={setActive} badge={getBadge(item.id)} />
           ))}
         </nav>
 
-        <button onClick={handleLogout} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "9px 10px", borderRadius: 10, border: "none", cursor: "pointer", marginTop: 12, background: "rgba(239,68,68,0.1)", color: "#f87171", fontSize: 12, fontWeight: 500 }}>
+        <button
+          onClick={() => { localStorage.clear(); navigate("/login"); }}
+          style={{
+            display: "flex", alignItems: "center", gap: 8,
+            width: "100%", padding: "9px 10px", borderRadius: 10,
+            border: "none", cursor: "pointer", marginTop: 12,
+            background: "rgba(239,68,68,0.1)", color: "#f87171",
+            fontSize: 12, fontWeight: 500,
+          }}
+        >
           <LogOut size={14} /> Déconnexion
         </button>
       </aside>
 
-      <main style={{ flex: 1, padding: "28px 32px", overflowY: "auto" }}>
+      {/* Main */}
+      <main style={{ flex: 1, padding: "28px 32px", overflowY: "auto", background: "#f8fafc" }}>
         {renderPage()}
       </main>
     </div>

@@ -1,5 +1,5 @@
 import {
-  BookOpen, Link2, Calendar, GraduationCap, CheckSquare, MessageCircle, Bell,
+  BookOpen, Link2, Calendar, GraduationCap, CheckSquare, MessageCircle,
 } from "lucide-react";
 
 export const CHEF_NAV = [
@@ -9,5 +9,4 @@ export const CHEF_NAV = [
   { id: "creneaux",        label: "Créneaux",          sub: "Planning jury & salles",      icon: Calendar      },
   { id: "soutenances",     label: "Soutenances",       sub: "Planifier & résultats",       icon: GraduationCap },
   { id: "messagerie",      label: "Messagerie",        sub: "Profs & étudiants",           icon: MessageCircle },
-  { id: "notifications",   label: "Notifications",     sub: "Alertes & infos",             icon: Bell          },
 ];

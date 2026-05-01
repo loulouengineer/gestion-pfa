@@ -8,9 +8,17 @@ public class SujetRequest {
     private List<String> motsCles;
     private List<String> competences;
     private Integer rang;
+    private Integer difficulte;
+    private Boolean disponible;
 
     public Integer getRang() {return rang; }
     public void setRang(Integer rang) { this.rang = rang; }
+
+    public Integer getDifficulte() { return difficulte; }
+    public void setDifficulte(Integer difficulte) { this.difficulte = difficulte; }
+
+    public Boolean getDisponible() { return disponible; }
+    public void setDisponible(Boolean disponible) { this.disponible = disponible; }
 
 
     public String getTitre() { return titre; }

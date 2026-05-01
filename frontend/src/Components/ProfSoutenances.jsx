@@ -1,20 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { soutenanceApi } from "../api/api";
 import { Card, StatBar, PageHeader, LoadingSkeleton, EmptyState, Alert, Button, Badge } from "./ui";
-import { Calendar, Clock, MapPin, Users, CheckCircle, ChevronDown, ChevronUp, UserX } from "lucide-react";
-
-const MENTIONS = ["Passable", "Assez bien", "Bien", "Très bien", "Excellent"];
-
-function presenceLabel(val) {
-  return val === false ? "Absent" : "Présent";
-}
+import { Calendar, Clock, MapPin, Users, Star, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
 
 function SoutenanceCard({ soutenance, onResultat }) {
   const [open, setOpen]     = useState(false);
-  const [form, setForm]     = useState({
-    note: "", observations: "", mention: "",
-    presentEtudiant1: "true", presentEtudiant2: "true",
-  });
+  const [form, setForm]     = useState({ note: "", observations: "", present: "true" });
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState(null);
   const [success, setSuccess] = useState(false);
@@ -22,8 +13,8 @@ function SoutenanceCard({ soutenance, onResultat }) {
   const isTerminee = soutenance.statut === "TERMINEE";
   const creneau    = soutenance.creneau;
   const jury       = creneau?.jury || [];
-  const etudiant1  = soutenance.binome?.etudiant1;
-  const etudiant2  = soutenance.binome?.etudiant2;
+
+  const isPast = creneau?.date && new Date(`${creneau.date}T${creneau.heureFin}`) < new Date();
 
   const noteColor = isTerminee && soutenance.note !== null
     ? soutenance.note >= 16 ? "#10b981"
@@ -39,9 +30,7 @@ function SoutenanceCard({ soutenance, onResultat }) {
       await soutenanceApi.enregistrerResultat(soutenance.id, {
         note,
         observations: form.observations,
-        mention: form.mention,
-        presentEtudiant1: form.presentEtudiant1 === "true",
-        presentEtudiant2: form.presentEtudiant2 === "true",
+        present: form.present === "true",
       });
       setSuccess(true);
       onResultat();
@@ -77,6 +66,8 @@ function SoutenanceCard({ soutenance, onResultat }) {
               </span>
               <span style={{ fontSize: 9, color: noteColor, opacity: 0.7 }}>/20</span>
             </>
+          ) : isPast ? (
+            <Star size={18} color="var(--text-4)" />
           ) : (
             <Clock size={18} color="var(--text-4)" />
           )}
@@ -84,9 +75,9 @@ function SoutenanceCard({ soutenance, onResultat }) {
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 4 }}>
-            {etudiant1?.nom}
+            {soutenance.binome?.etudiant1?.nom}
             <span style={{ color: "var(--text-4)", fontWeight: 400, margin: "0 6px" }}>&</span>
-            {etudiant2?.nom}
+            {soutenance.binome?.etudiant2?.nom}
           </div>
           <div style={{ fontSize: 12, color: "var(--text-3)", marginBottom: 5 }}>
             {soutenance.sujet?.titre || "—"}
@@ -137,17 +128,16 @@ function SoutenanceCard({ soutenance, onResultat }) {
             </div>
           )}
 
-          {/* Submit evaluation */}
-          {!isTerminee && (
+          {/* Submit note — only if past and not yet done */}
+          {isPast && !isTerminee && (
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>
-                Soumettre l'évaluation
+                Soumettre la note
               </div>
               {error   && <Alert type="error"   message={error}   onClose={() => setError(null)}   />}
-              {success && <Alert type="success" message="Évaluation enregistrée avec succès." />}
+              {success && <Alert type="success" message="Note enregistrée avec succès." />}
 
-              {/* Row 1: Note + Mention */}
-              <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: 12, marginBottom: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "100px 1fr auto", gap: 10, alignItems: "end" }}>
                 <div>
                   <div style={{ fontSize: 10, color: "var(--text-4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Note /20</div>
                   <input type="number" min="0" max="20" step="0.25"
@@ -158,76 +148,39 @@ function SoutenanceCard({ soutenance, onResultat }) {
                   />
                 </div>
                 <div>
-                  <div style={{ fontSize: 10, color: "var(--text-4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Mention</div>
-                  <select value={form.mention} onChange={e => setForm(p => ({ ...p, mention: e.target.value }))}
-                    style={{ width: "100%", padding: "9px 10px", borderRadius: "var(--r-md)", border: "1px solid var(--border2)", background: "var(--surface)", fontSize: 13, cursor: "pointer", outline: "none" }}>
-                    <option value="">— Sélectionner —</option>
-                    {MENTIONS.map(m => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              {/* Row 2: Observations */}
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 10, color: "var(--text-4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Observations</div>
-                <input placeholder="Commentaires du jury..."
-                  value={form.observations}
-                  onChange={e => setForm(p => ({ ...p, observations: e.target.value }))}
-                  style={{ width: "100%", padding: "9px 10px", borderRadius: "var(--r-md)", border: "1px solid var(--border2)", background: "var(--surface)", fontSize: 13, outline: "none", boxSizing: "border-box" }}
-                />
-              </div>
-
-              {/* Row 3: Presence per member */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
-                <div>
-                  <div style={{ fontSize: 10, color: "var(--text-4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>
-                    <UserX size={9} style={{ verticalAlign: "middle", marginRight: 3 }} />
-                    {etudiant1?.nom || "Étudiant 1"}
-                  </div>
-                  <select value={form.presentEtudiant1} onChange={e => setForm(p => ({ ...p, presentEtudiant1: e.target.value }))}
-                    style={{ width: "100%", padding: "9px 10px", borderRadius: "var(--r-md)", border: "1px solid var(--border2)", background: "var(--surface)", fontSize: 13, cursor: "pointer" }}>
-                    <option value="true">Présent</option>
-                    <option value="false">Absent</option>
-                  </select>
+                  <div style={{ fontSize: 10, color: "var(--text-4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Observations</div>
+                  <input placeholder="Commentaires du jury..."
+                    value={form.observations}
+                    onChange={e => setForm(p => ({ ...p, observations: e.target.value }))}
+                    style={{ width: "100%", padding: "9px 10px", borderRadius: "var(--r-md)", border: "1px solid var(--border2)", background: "var(--surface)", fontSize: 13, outline: "none", boxSizing: "border-box" }}
+                  />
                 </div>
                 <div>
-                  <div style={{ fontSize: 10, color: "var(--text-4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>
-                    <UserX size={9} style={{ verticalAlign: "middle", marginRight: 3 }} />
-                    {etudiant2?.nom || "Étudiant 2"}
-                  </div>
-                  <select value={form.presentEtudiant2} onChange={e => setForm(p => ({ ...p, presentEtudiant2: e.target.value }))}
-                    style={{ width: "100%", padding: "9px 10px", borderRadius: "var(--r-md)", border: "1px solid var(--border2)", background: "var(--surface)", fontSize: 13, cursor: "pointer" }}>
+                  <div style={{ fontSize: 10, color: "var(--text-4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Présence</div>
+                  <select value={form.present} onChange={e => setForm(p => ({ ...p, present: e.target.value }))}
+                    style={{ padding: "9px 10px", borderRadius: "var(--r-md)", border: "1px solid var(--border2)", background: "var(--surface)", fontSize: 13, cursor: "pointer" }}>
                     <option value="true">Présent</option>
                     <option value="false">Absent</option>
                   </select>
                 </div>
               </div>
-
-              <Button variant="primary" size="sm" icon={CheckCircle} onClick={handleSave} disabled={saving}>
-                {saving ? "Enregistrement..." : "Soumettre l'évaluation"}
+              <Button variant="primary" size="sm" icon={CheckCircle} onClick={handleSave} disabled={saving} style={{ marginTop: 12 }}>
+                {saving ? "Enregistrement..." : "Soumettre la note"}
               </Button>
             </div>
           )}
 
           {isTerminee && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "flex-start" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--green-text)", fontWeight: 600 }}>
-                <CheckCircle size={13} /> Évaluation soumise
-              </div>
-              {soutenance.mention && (
-                <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: "rgba(59,130,246,0.1)", color: "var(--blue-600)", border: "1px solid rgba(59,130,246,0.2)" }}>
-                  {soutenance.mention}
-                </span>
-              )}
-              <span style={{ fontSize: 11, color: "var(--text-4)" }}>
-                {etudiant1?.nom}: {presenceLabel(soutenance.presentEtudiant1 !== undefined ? soutenance.presentEtudiant1 : soutenance.present)}
-              </span>
-              <span style={{ fontSize: 11, color: "var(--text-4)" }}>
-                {etudiant2?.nom}: {presenceLabel(soutenance.presentEtudiant2 !== undefined ? soutenance.presentEtudiant2 : soutenance.present)}
-              </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--green-text)", fontWeight: 600 }}>
+              <CheckCircle size={13} /> Note soumise — {soutenance.present ? "Étudiant présent" : "Étudiant absent"}
             </div>
           )}
 
+          {!isPast && !isTerminee && (
+            <div style={{ fontSize: 12, color: "var(--text-4)", fontStyle: "italic" }}>
+              La saisie de note sera disponible après la soutenance.
+            </div>
+          )}
         </div>
       )}
     </Card>

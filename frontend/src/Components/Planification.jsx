@@ -281,9 +281,9 @@ function CalendrierCustom({ creneaux, soutenances, onEventReceive, onEventClick,
     // Available creneaux
     creneaux.filter(c =>
       c.statut === "DISPONIBLE" && c.date === dateStr &&
-      c.heureDebut.substring(0,5) === slot && c.jury?.length > 0 && c.salle
+      c.heureDebut.substring(0,5) === slot && c.salle
     ).forEach(c => {
-      const juryNoms = c.jury.map(j => j.nom.split(" ").slice(-1)[0]).join(", ");
+      const juryNoms = (c.jury || []).map(j => j.nom.split(" ").slice(-1)[0]).join(", ");
       events.push({ type: "libre", id: c.id, title: c.salle, sub: juryNoms, creneau: c });
     });
     // Planned soutenances
@@ -310,8 +310,7 @@ function CalendrierCustom({ creneaux, soutenances, onEventReceive, onEventClick,
 
     const creneau = creneaux.find(c =>
       c.statut === "DISPONIBLE" && c.date === dateStr &&
-      c.heureDebut.substring(0,5) === slot &&
-      c.jury?.length > 0 && c.salle
+      c.heureDebut.substring(0,5) === slot && c.salle
     );
     if (!creneau) return;
     onEventReceive({ affectation, creneau });
@@ -399,7 +398,7 @@ function CalendrierCustom({ creneaux, soutenances, onEventReceive, onEventClick,
                 const dropKey = `${dateStr}-${slot}`;
                 const hasDropTarget = creneaux.some(c =>
                   c.statut === "DISPONIBLE" && c.date === dateStr &&
-                  c.heureDebut.substring(0,5) === slot && c.jury?.length > 0
+                  c.heureDebut.substring(0,5) === slot
                 );
 
                 return (
@@ -472,8 +471,7 @@ export default function Planification() {
       ]);
       setAffectations(affs);
       setSoutenances(sous);
-      // Filtre: seulement créneaux VALIDES (jury + salle)
-      setCreneaux(cren.filter(c => c.jury?.length > 0 && c.salle));
+      setCreneaux(cren.filter(c => c.salle));
       setError(null);
     } catch (e) { setError(e.message); }
     finally { setLoading(false); }

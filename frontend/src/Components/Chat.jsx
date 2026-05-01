@@ -3,7 +3,7 @@ import { chatApi, professeurApi } from "../api/api";
 import { PageHeader, Card, EmptyState, LoadingSkeleton, Button, Badge } from "./ui";
 import { MessageCircle, Send, User, Users } from "lucide-react";
 
-
+const ADMIN_ID = parseInt(localStorage.getItem("userId") || "1");
 const POLL_INTERVAL = 5000; // 5 secondes
 
 function ConversationList({ conversations, profs, selectedId, onSelect, loading }) {
@@ -108,8 +108,7 @@ function MessageBubble({ msg, isOwn }) {
   );
 }
 
-export default function Chat({ adminId }) {
-  const ADMIN_ID = adminId || Number(localStorage.getItem("userId")) || 1;
+export default function Chat() {
   const [profs, setProfs]               = useState([]);
   const [conversations, setConversations] = useState([]);
   const [messages, setMessages]         = useState([]);

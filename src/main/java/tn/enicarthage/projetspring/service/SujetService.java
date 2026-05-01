@@ -78,6 +78,28 @@ public class SujetService {
 
     }
 
+    public Sujet modifierSujet(Long id, SujetRequest request, String email) {
+        Sujet sujet = sujetRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Sujet non trouvé"));
+        if (sujet.getEncadrant() == null || !sujet.getEncadrant().getEmail().equals(email)) {
+            throw new RuntimeException("Non autorisé");
+        }
+        if (request.getTitre()       != null) sujet.setTitre(request.getTitre());
+        if (request.getDescription() != null) sujet.setDescription(request.getDescription());
+        if (request.getMotsCles()    != null) sujet.setMotsCles(request.getMotsCles());
+        if (request.getCompetences() != null) sujet.setCompetences(request.getCompetences());
+        if (request.getRang()        != null) sujet.setRang(request.getRang());
+        if (request.getDifficulte()  != null) sujet.setDifficulte(request.getDifficulte());
+        if (request.getDisponible()  != null) sujet.setDisponible(request.getDisponible());
+        return sujetRepository.save(sujet);
+    }
+
+    public List<Sujet> getSujetsByEncadrantId(Long encadrantId) {
+        return sujetRepository.findAll().stream()
+                .filter(s -> s.getEncadrant() != null && s.getEncadrant().getId().equals(encadrantId))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
     public Sujet changerStatut(Long id, String statut) {
         Sujet sujet = sujetRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Sujet non trouvé"));

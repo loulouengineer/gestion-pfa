@@ -63,6 +63,24 @@ public class SujetController {
         );
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<SujetDTO> modifierSujet(
+            @PathVariable Long id,
+            @RequestBody SujetRequest request,
+            Authentication authentication) {
+        String email = authentication.getName();
+        return ResponseEntity.ok(SujetDTO.from(sujetService.modifierSujet(id, request, email)));
+    }
+
+    @GetMapping("/encadrant/{profId}")
+    public ResponseEntity<List<SujetDTO>> getSujetsByEncadrant(@PathVariable Long profId) {
+        return ResponseEntity.ok(
+                sujetService.getSujetsByEncadrantId(profId).stream()
+                        .map(SujetDTO::from)
+                        .collect(Collectors.toList())
+        );
+    }
+
     @PatchMapping("/{id}/statut")
     public ResponseEntity<SujetDTO> changerStatut(
             @PathVariable Long id,

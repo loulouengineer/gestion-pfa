@@ -16,11 +16,30 @@ export const getSujetsDisponibles = () => api.get('/sujets/disponibles');
 export const getSujetById         = (id) => api.get(`/sujets/${id}`);
 
 export const sujetApi = {
-  getAll:        () => api.get('/sujets'),
-  getMesSujets:  () => api.get('/sujets/mes-sujets'),
-  creer:         (data) => api.post('/sujets', data),
-  supprimer:     (id) => api.delete(`/sujets/${id}`),
-  changerStatut: (id, statut) => api.patch(`/sujets/${id}/statut`, null, { params: { statut } }),
+  getAll:         () => api.get('/sujets'),
+  getMesSujets:   () => api.get('/sujets/mes-sujets'),
+  creer:          (data) => api.post('/sujets', data),
+  supprimer:      (id) => api.delete(`/sujets/${id}`),
+  changerStatut:  (id, statut) => api.patch(`/sujets/${id}/statut`, null, { params: { statut } }),
+  modifier:       (id, data) => api.put(`/sujets/${id}`, data).then(r => r.data),
+  getByEncadrant: () => api.get('/sujets/mes-sujets').then(r => r.data),
+  getDemandes:    () => api.get('/affectations').then(r =>
+    r.data.map(a => ({
+      ...a,
+      affectationId: a.id,
+      binome: a.binome ? {
+        ...a.binome,
+        etudiant1: a.binome.etudiant1?.nom || "—",
+        etudiant2: a.binome.etudiant2?.nom || "—",
+        moyenne:   a.binome.moyenneBinome,
+      } : null,
+      sujet: a.sujet ? {
+        ...a.sujet,
+        encadrant: a.sujet.encadrant?.nom || "—",
+      } : null,
+      ordre: null,
+    }))
+  ),
 };
 
 /* ══════════════════════════════════════════════════
@@ -75,6 +94,7 @@ export const exportExcel = () => window.open('http://localhost:8085/api/resultat
 ══════════════════════════════════════════════════ */
 export const soutenanceApi = {
   getAll:              () => api.get('/soutenances').then(r => r.data),
+  getPlanningFinal:    () => api.get('/soutenances').then(r => r.data),
   getByProf:           (profId) => api.get(`/soutenances/prof/${profId}`).then(r => r.data),
   getByEtudiant:       (etudiantId) => api.get(`/soutenances/etudiant/${etudiantId}`).then(r => r.data),
   planifier:           (data) => api.post('/soutenances/planifier', data).then(r => r.data),

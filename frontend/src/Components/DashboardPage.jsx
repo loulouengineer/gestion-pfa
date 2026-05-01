@@ -3,24 +3,26 @@ import api from '../api/axios';
 
 export default function DashboardPage({ onNavigate }) {
   const [data, setData] = useState({
-    statutGlobal: "En cours",
-    statutGlobalSub: "Votre PFA est en cours",
-    binomeStatus: "—",
-    binomeStatusSub: "Vérification…",
-    sujetStatus: "—",
-    sujetStatusSub: "Vérification…",
+    statutGlobal: "Chargement...",
+    statutGlobalSub: "Veuillez patienter",
+    binomeStatus: "...",
+    binomeStatusSub: "...",
+    sujetStatus: "...",
+    sujetStatusSub: "...",
     joursRestants: null,
-    joursRestantsSub: "Avant la soutenance",
-    progressPercentage: 10,
+    joursRestantsSub: "...",
+    progressPercentage: 0,
     currentStep: 1
   });
 
   useEffect(() => {
-    const etudiantId = localStorage.getItem("userId");
-    if (!etudiantId) return;
-    api.get(`/dashboard/${etudiantId}`)
-      .then(response => { setData(response.data); })
-      .catch(() => {});
+    api.get(`/dashboard/${localStorage.getItem('userId') || 1}`)
+      .then(response => {
+        setData(response.data);
+      })
+      .catch(error => {
+        console.error("Erreur lors du chargement du dashboard:", error);
+      });
   }, []);
 
   return (

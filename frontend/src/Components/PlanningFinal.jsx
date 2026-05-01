@@ -87,7 +87,7 @@ function SoutenanceCard({ soutenance, index }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
             <div>
               <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>Sujet</div>
-              <div style={{ fontSize: 12, fontWeight: 500, color: "var(--text-2)" }}>{soutenance.affectation?.sujet?.titre || "—"}</div>
+              <div style={{ fontSize: 12, fontWeight: 500, color: "var(--text-2)" }}>{soutenance.sujet?.titre || soutenance.affectation?.sujet?.titre || "—"}</div>
             </div>
             <div>
               <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>Jury</div>
