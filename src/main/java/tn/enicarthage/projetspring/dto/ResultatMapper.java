@@ -3,6 +3,8 @@ package tn.enicarthage.projetspring.dto;
 
 import tn.enicarthage.projetspring.entity.*;
 
+import java.time.LocalDateTime;
+
 public class ResultatMapper {
 
     public static ResultatDTO toDTO(Resultat r) {
@@ -16,15 +18,21 @@ public class ResultatMapper {
 
         Soutenance s = r.getSoutenance();
         if (s != null) {
-            dto.setSalle(s.getSalle());
-            if (s.getDateHeure() != null)
-                dto.setDateHeure(s.getDateHeure().toString());
+            // salle et dateHeure viennent du créneau dans la nouvelle architecture
+            if (s.getCreneau() != null) {
+                dto.setSalle(s.getCreneau().getSalle());
+                dto.setDateHeure(LocalDateTime.of(
+                        s.getCreneau().getDate(),
+                        s.getCreneau().getHeureDebut()).toString());
+            }
 
             if (s.getSujet() != null)
                 dto.setProjetTitre(s.getSujet().getTitre());
 
-            if (s.getProfesseur() != null)
-                dto.setProfesseurNom(s.getProfesseur().getNom());
+            // l'encadrant du sujet = professeur principal du jury
+            Professeur encadrant = s.getEncadrant();
+            if (encadrant != null)
+                dto.setProfesseurNom(encadrant.getNom());
 
             Binome b = s.getBinome();
             if (b != null) {

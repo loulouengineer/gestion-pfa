@@ -96,8 +96,11 @@ public class DashboardService {
             progressPercentage = 60;
             statutGlobalSub = "Phase 3 : Préparation du rapport";
 
-            if (soutenance.getDateHeure() != null) {
-                long days = ChronoUnit.DAYS.between(LocalDateTime.now(), soutenance.getDateHeure());
+            if (soutenance.getCreneau() != null) {
+                LocalDateTime dateHeure = LocalDateTime.of(
+                        soutenance.getCreneau().getDate(),
+                        soutenance.getCreneau().getHeureDebut());
+                long days = ChronoUnit.DAYS.between(LocalDateTime.now(), dateHeure);
                 joursRestants = (int) days;
                 if (days < 0) {
                     joursRestants = 0;
