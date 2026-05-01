@@ -32,14 +32,40 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // ✅ Endpoints publics (sans token)
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/login-etudiant",
+                                "/api/auth/register",
+                                "/api/auth/confirmer",
+                                "/api/etudiants/inscrire",
+                                "/api/auth/mot-de-passe-oublie",   // ← AJOUT
+                                "/api/auth/reinitialiser-mdp"
+                        ).permitAll()
+
+                        //  Reste de /api/auth/** (si besoin)
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/etudiants/inscrire").permitAll()
+
+                        // Tous les utilisateurs authentifiés
                         .requestMatchers("/api/etudiants/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
                         .requestMatchers("/api/choix/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
                         .requestMatchers("/api/sujets/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
                         .requestMatchers("/api/binomes/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
                         .requestMatchers("/api/recommandation/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
                         .requestMatchers("/api/recommandation-ia/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
+
+                        // Endpoints soutenance/planning (accessible à tous les rôles)
+                        .requestMatchers("/api/soutenances/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
+                        .requestMatchers("/api/creneaux/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
+                        .requestMatchers("/api/disponibilites/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
+                        .requestMatchers("/api/professeurs/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
+                        .requestMatchers("/api/affectations/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
+                        .requestMatchers("/api/chat/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
+                        .requestMatchers("/api/notifications/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
+                        .requestMatchers("/api/resultats/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
+                        .requestMatchers("/api/dashboard/**").hasAnyAuthority("ROLE_ETUDIANT", "ROLE_ENSEIGNANT", "ROLE_CHEF_DEPT")
+
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

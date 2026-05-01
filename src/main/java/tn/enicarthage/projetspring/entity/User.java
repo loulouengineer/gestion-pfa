@@ -4,8 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-
-@Inheritance(strategy = InheritanceType.JOINED)  // ← ajouté
+@Inheritance(strategy = InheritanceType.JOINED)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -20,7 +19,7 @@ public class User {
     private String nom;
 
     @Column(nullable = false)
-    private String prenom;  // ← ajouté (utilisé dans Professeur)
+    private String prenom;
 
     @Column(nullable = false, unique = true)
     private String email;
@@ -31,4 +30,12 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
+
+    // 🆕 Ajouts pour validation chef de département
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private StatutCompte statut = StatutCompte.EN_ATTENTE;
+
+    @Column(nullable = true)
+    private String tokenConfirmation;
 }

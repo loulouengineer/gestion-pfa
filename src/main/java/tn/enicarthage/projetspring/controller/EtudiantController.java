@@ -18,11 +18,7 @@ public class EtudiantController {
     @Autowired
     private EtudiantService etudiantService;
 
-    @PostMapping("/inscrire")
-    public ResponseEntity<Etudiant> inscrire(
-            @RequestBody EtudiantRequest request) {
-        return ResponseEntity.ok(etudiantService.inscrire(request));
-    }
+
 
     @GetMapping("/recherche")
     public ResponseEntity<List<Etudiant>> rechercher(@RequestParam String q) {
@@ -34,5 +30,19 @@ public class EtudiantController {
             Authentication authentication) {
         String email = authentication.getName();
         return ResponseEntity.ok(etudiantService.getRecommandations(email));
+    }
+
+    @GetMapping("/profil")
+    public ResponseEntity<?> getProfil(Authentication authentication) {
+        String email = authentication.getName();
+        return ResponseEntity.ok(etudiantService.getProfil(email));
+    }
+
+    @PutMapping("/profil")
+    public ResponseEntity<?> updateProfil(
+            Authentication authentication,
+            @RequestBody EtudiantRequest request) {
+        String email = authentication.getName();
+        return ResponseEntity.ok(etudiantService.updateProfil(email, request));
     }
 }

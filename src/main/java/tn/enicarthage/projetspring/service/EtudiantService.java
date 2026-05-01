@@ -181,4 +181,17 @@ public class EtudiantService {
 
         return msgRang + " " + msgScore;
     }
+
+    public Etudiant getProfil(String email) {
+        return etudiantRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Étudiant non trouvé"));
+    }
+
+    public Etudiant updateProfil(String email, EtudiantRequest request) {
+        Etudiant etudiant = etudiantRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Étudiant non trouvé"));
+        etudiant.setMoyenne(request.getMoyenne().floatValue());
+        etudiant.setCompetences(request.getCompetences());
+        return etudiantRepository.save(etudiant);
+    }
 }
