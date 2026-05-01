@@ -10,8 +10,6 @@ const Register = () => {
   const [role, setRole] = useState("ENSEIGNANT");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [moyenne, setMoyenne] = useState("");
-  const [competences, setCompetences] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -25,8 +23,28 @@ const Register = () => {
       setError("Les mots de passe ne correspondent pas");
       return;
     }
-    if (role === "ETUDIANT" && !moyenne) {
-      setError("Veuillez entrer votre moyenne");
+
+    // Validation email
+    if (!email.endsWith("@enicar.ucar.tn")) {
+      setError("L'email doit être une adresse @enicar.ucar.tn");
+      return;
+    }
+
+    // Validation mot de passe
+    const passwordRegex = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      setError("Le mot de passe doit contenir au moins 8 caractères, 1 majuscule, 1 chiffre et 1 caractère spécial");
+      return;
+    }
+
+    // Validation nom et prénom
+    const nomRegex = /^[a-zA-ZÀ-ÿ\s\-']{2,50}$/;
+    if (!nomRegex.test(nom)) {
+      setError("Le nom ne doit contenir que des lettres (2-50 caractères)");
+      return;
+    }
+    if (!nomRegex.test(prenom)) {
+      setError("Le prénom ne doit contenir que des lettres (2-50 caractères)");
       return;
     }
 
@@ -34,51 +52,18 @@ const Register = () => {
     setError("");
 
     try {
-      let response;
+      // Tous les rôles passent par le même endpoint
+      await api.post("/auth/register", {
+        nom,
+        prenom,
+        email,
+        password,
+        role,
+      });
 
-      if (role === "ETUDIANT") {
-        response = await api.post("/etudiants/inscrire", {
-          nom,
-          prenom,
-          email,
-          password,
-          moyenne: parseFloat(moyenne),
-          competences: competences
-            .split(",")
-            .map(c => c.trim())
-            .filter(c => c),
-        });
-
-        const loginResponse = await api.post("/auth/login-etudiant", {
-          email,
-          password,
-        });
-
-        localStorage.setItem("token", loginResponse.data.token);
-        localStorage.setItem("role", loginResponse.data.role);
-        localStorage.setItem("userName", loginResponse.data.nom);
-        navigate("/dashboard-etudiant");
-
-      } else {
-        // ✅ prenom ajouté ici
-        response = await api.post("/auth/register", {
-          nom,
-          prenom,
-          email,
-          password,
-          role,
-        });
-
-        localStorage.setItem("token", response.data.token);
-        localStorage.setItem("role", response.data.role);
-        localStorage.setItem("userName", response.data.nom);
-
-        if (response.data.role === "ENSEIGNANT") {
-          navigate("/dashboard-prof");
-        } else if (response.data.role === "CHEF_DEPT") {
-          navigate("/dashboard-chef");
-        }
-      }
+      // Pas de login automatique — compte EN_ATTENTE
+      alert("Votre demande a été envoyée. Attendez la validation du chef de département.");
+      navigate("/login");
     } catch (err) {
       setError(err.response?.data?.message || "Erreur lors de l'inscription");
     } finally {
@@ -135,37 +120,9 @@ const Register = () => {
             <label>Rôle</label>
             <select value={role} onChange={e => setRole(e.target.value)}>
               <option value="ENSEIGNANT">Enseignant</option>
-              <option value="CHEF_DEPT">Chef de département</option>
               <option value="ETUDIANT">Étudiant</option>
             </select>
           </div>
-
-          {role === "ETUDIANT" && (
-            <>
-              <div className="form-group">
-                <label>Moyenne générale (sur 20)</label>
-                <input
-                  type="number"
-                  placeholder="ex: 14.5"
-                  min="0"
-                  max="20"
-                  step="0.1"
-                  value={moyenne}
-                  onChange={e => setMoyenne(e.target.value)}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Compétences (séparées par virgules)</label>
-                <input
-                  type="text"
-                  placeholder="ex: Java, React, Python"
-                  value={competences}
-                  onChange={e => setCompetences(e.target.value)}
-                />
-              </div>
-            </>
-          )}
 
           <div className="form-group">
             <label>Mot de passe</label>

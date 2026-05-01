@@ -6,53 +6,54 @@ import ChoixSujets from "./Components/ChoixSujets";
 import Recommandations from "./Components/Recommandations";
 import StatsBar from "./Components/StatsBar";
 import Binome from "./Components/Binome";
+import Profiletudiant from "./Components/Profiletudiant.jsx";
 
 import { getSujetsDisponibles, getBinomeActuel } from "./api/api";
 
-import Home from "./Components/Home.jsx";
-import Login from "./Components/Login.jsx";
-import Register from "./Components/Register.jsx";
+import Home          from "./Components/Home.jsx";
+import Login         from "./Components/Login.jsx";
+import Register      from "./Components/Register.jsx";
+import ForgetPassword from "./Components/ForgetPassword.jsx";
+import ResetPassword  from "./Components/ResetPassword.jsx";
 import DashboardChef from "./Components/DasheboardChef.jsx";
 import DashboardProf from "./Components/DashebordProf.jsx";
-import DashboardPage from "./Components/DashboardPage";
-import ResultatsPage from "./Components/ResultatsPage";
-import ProfApp from "./Components/ProfApp.jsx";
+import ProfApp       from "./Components/ProfApp.jsx";
 
 import "./App.css";
 
+// ── Navigation étudiant ──────────────────────────────────────────────────────
 const NAV_ITEMS = [
-  { num: "⌂", label: "Accueil", sub: "Tableau de bord", id: "accueil" },
-  { num: 1, label: "Mon binôme", sub: "Associer un partenaire", id: "binome" },
-  { num: 2, label: "Sujets", sub: "Parcourir & sélectionner", id: "sujets" },
-  { num: 3, label: "Recommandations", sub: "Suggestions IA", id: "recommandations" },
-  { num: 4, label: "Mes vœux", sub: "Ordre & soumission", id: "mes-choix" },
-  { num: 5, label: "Résultats", sub: "Résultats & présence", id: "resultats" },
+  { num: 1, label: "Mon binôme",       sub: "Associer un partenaire",  id: "binome"          },
+  { num: 2, label: "Sujets",           sub: "Parcourir & sélectionner",id: "sujets"          },
+  { num: 3, label: "Recommandations",  sub: "Suggestions IA",          id: "recommandations" },
+  { num: 4, label: "Mes vœux",         sub: "Ordre & soumission",      id: "mes-choix"       },
+  { num: 5, label: "Mon profil",       sub: "Mes informations",        id: "profil"          },
 ];
 
 const PAGE_META = {
-  accueil: { title: "Accueil", sub: "Tableau de bord" },
-  binome: { title: "Mon binôme", sub: "Associez-vous à un partenaire" },
-  sujets: { title: "Sujets disponibles", sub: "Parcourir et sélectionner" },
-  recommandations: { title: "Recommandations IA", sub: "Suggestions personnalisées" },
-  "mes-choix": { title: "Mes vœux", sub: "Classement final" },
-  resultats: { title: "Résultats", sub: "Résultats & présence" },
+  binome:          { title: "Mon binôme",          sub: "Associez-vous à un partenaire"     },
+  sujets:          { title: "Sujets disponibles",  sub: "Parcourir et sélectionner"         },
+  recommandations: { title: "Recommandations IA",  sub: "Suggestions personnalisées"        },
+  "mes-choix":     { title: "Mes vœux",            sub: "Classement final"                  },
+  profil:          { title: "Mon profil",           sub: "Mes informations académiques"      },
 };
 
+// ── Dashboard étudiant ───────────────────────────────────────────────────────
 function DashboardEtudiant() {
-  const [onglet, setOnglet] = useState("accueil");
+  const [onglet, setOnglet]           = useState("binome");
   const [choixActuels, setChoixActuels] = useState([]);
   const [nouveauSujet, setNouveauSujet] = useState(null);
   const [totalSujets, setTotalSujets] = useState(0);
-  const [binome, setBinome] = useState(null);
+  const [binome, setBinome]           = useState(null);
 
-  const userId = localStorage.getItem("userId");
+  const userId   = localStorage.getItem("userId");
   const userName = localStorage.getItem("userName") || "Étudiant";
 
   const etudiant = {
-    id: userId,
-    nom: userName,
+    id:        userId,
+    nom:       userName,
     matricule: localStorage.getItem("matricule") || "",
-    moyenne: parseFloat(localStorage.getItem("moyenne")) || 0,
+    moyenne:   parseFloat(localStorage.getItem("moyenne")) || 0,
   };
 
   useEffect(() => {
@@ -117,9 +118,6 @@ function DashboardEtudiant() {
           binome={binome}
         />
 
-       {onglet === "accueil" && (
-  <DashboardPage onNavigate={setOnglet} />)}
-
         {onglet === "binome" && (
           <Binome
             etudiant={etudiant}
@@ -152,26 +150,28 @@ function DashboardEtudiant() {
           />
         )}
 
-        {onglet === "resultats" && (
-  <ResultatsPage />)}
+        {onglet === "profil" && <Profiletudiant />}
       </main>
     </div>
   );
 }
 
+// ── Routes ───────────────────────────────────────────────────────────────────
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/dashboard-chef" element={<DashboardChef />} />
-      <Route path="/dashboard-prof" element={<DashboardProf />} />
-      <Route path="/dashboard-etudiant" element={<DashboardEtudiant />} />
+      <Route path="/"                    element={<Home />} />
+      <Route path="/login"               element={<Login />} />
+      <Route path="/register"            element={<Register />} />
+      <Route path="/mot-de-passe-oublie" element={<ForgetPassword />} />
+      <Route path="/reinitialiser-mdp"   element={<ResetPassword />} />
+      <Route path="/dashboard-chef"      element={<DashboardChef />} />
+      <Route path="/dashboard-prof"      element={<DashboardProf />} />
+      <Route path="/dashboard-etudiant"  element={<DashboardEtudiant />} />
       <Route path="/prof" element={
         <ProfApp
           prof={{
-            id: localStorage.getItem("userId"),
+            id:  localStorage.getItem("userId"),
             nom: localStorage.getItem("userName") || "Professeur",
           }}
           onLogout={() => {
