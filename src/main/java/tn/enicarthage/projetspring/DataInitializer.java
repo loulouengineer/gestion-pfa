@@ -224,27 +224,27 @@ public class DataInitializer {
             sout1.setBinome(b1); sout1.setAffectation(a1); sout1.setCreneau(c1);
             sout1.setJury(List.of(p1, p3));
             sout1.setStatut(Soutenance.StatutSoutenance.TERMINEE);
-            sout1.setNote(17.5f); sout1.setMention("Très bien");
+            sout1.setNote(17.5f);
             sout1.setObservations("Excellent travail. Présentation fluide, rapport complet, bonne maîtrise technique.");
-            sout1.setPresentEtudiant1(true); sout1.setPresentEtudiant2(true); sout1.setPresent(true);
+            sout1.setPresent(true);
 
             // Soutenance terminée : Amine & Rania (b2) — s2
             Soutenance sout2 = new Soutenance();
             sout2.setBinome(b2); sout2.setAffectation(a2); sout2.setCreneau(c2);
             sout2.setJury(List.of(p2, p4));
             sout2.setStatut(Soutenance.StatutSoutenance.TERMINEE);
-            sout2.setNote(15.0f); sout2.setMention("Bien");
+            sout2.setNote(15.0f);
             sout2.setObservations("Bon projet, interface claire. Quelques lacunes dans la partie déploiement.");
-            sout2.setPresentEtudiant1(true); sout2.setPresentEtudiant2(true); sout2.setPresent(true);
+            sout2.setPresent(true);
 
             // Soutenance terminée : Sana & Ines (b3) — s3 (un étudiant absent)
             Soutenance sout3 = new Soutenance();
             sout3.setBinome(b3); sout3.setAffectation(a3); sout3.setCreneau(c3);
             sout3.setJury(List.of(p3, p5));
             sout3.setStatut(Soutenance.StatutSoutenance.TERMINEE);
-            sout3.setNote(13.5f); sout3.setMention("Passable");
-            sout3.setObservations("Résultats corrects. Manque de profondeur dans l'analyse comparative. Étudiant 2 absent.");
-            sout3.setPresentEtudiant1(true); sout3.setPresentEtudiant2(false); sout3.setPresent(true);
+            sout3.setNote(13.5f);
+            sout3.setObservations("Résultats corrects. Manque de profondeur dans l'analyse comparative.");
+            sout3.setPresent(false);
 
             // Soutenance planifiée : Khalil & Dorra (b4) — s5
             Soutenance sout4 = new Soutenance();
