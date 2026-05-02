@@ -12,7 +12,7 @@ import Binome            from "./Components/Binome";
 import Profiletudiant    from "./Components/Profiletudiant.jsx";
 import DashboardPage     from "./Components/DashboardPage";
 
-import { getSujetsDisponibles, getBinomeActuel, soutenanceApi } from "./api/api";
+import { getSujetsDisponibles, getBinomeActuel, soutenanceApi, professeurApi } from "./api/api";
 
 import Home           from "./Components/Home.jsx";
 import Login          from "./Components/Login.jsx";
@@ -187,6 +187,28 @@ function DashboardEtudiant() {
   );
 }
 
+/* ── Prof route: resolves real Professeur ID via API ────────────────────── */
+function ProfRoute() {
+  const [prof, setProf] = useState(null);
+
+  useEffect(() => {
+    const email = localStorage.getItem("userEmail");
+    const name  = localStorage.getItem("userName") || "Professeur";
+    if (!email) { setProf({ id: null, nom: name }); return; }
+    professeurApi.getByEmail(email)
+      .then(p => setProf({ id: p.id, nom: p.nom || name, departement: p.departement }))
+      .catch(() => setProf({ id: Number(localStorage.getItem("userId")) || null, nom: name }));
+  }, []);
+
+  if (!prof) return null;
+  return (
+    <ProfApp
+      prof={prof}
+      onLogout={() => { localStorage.clear(); window.location.href = "/login"; }}
+    />
+  );
+}
+
 /* ── Routes ─────────────────────────────────────────────────────────────── */
 export default function App() {
   return (
@@ -208,10 +230,7 @@ export default function App() {
       {/* Professeur only */}
       <Route path="/prof" element={
         <RoleGuard allowedRole="ENSEIGNANT">
-          <ProfApp
-            prof={{ id: localStorage.getItem("userId"), nom: localStorage.getItem("userName") || "Professeur" }}
-            onLogout={() => { localStorage.clear(); window.location.href = "/login"; }}
-          />
+          <ProfRoute />
         </RoleGuard>
       } />
 

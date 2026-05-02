@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { ClipboardList, ChevronDown, ChevronUp, Calendar, MapPin, CheckCircle, Clock } from "lucide-react";
 import { soutenanceApi } from "../api/api";
-import { Badge, Card, Alert, StatBar, PageHeader, LoadingSkeleton, EmptyState } from "./ui";
+import { Badge, Card, Alert, PageHeader, LoadingSkeleton, EmptyState } from "./ui";
 
 function SoutenanceCard({ soutenance, index }) {
   const [open, setOpen] = useState(false);
@@ -151,12 +151,22 @@ export default function PlanningFinal() {
         subtitle="Résultats et notes des soutenances"
       />
 
-      <StatBar stats={[
-        { label: "Total",     value: soutenances.length,               color: "var(--blue-600)" },
-        { label: "Planifiées",value: count("PLANIFIEE"), total: soutenances.length, color: "var(--blue-500)"  },
-        { label: "Terminées", value: count("TERMINEE"),  total: soutenances.length, color: "var(--green)"    },
-        { label: "Moy. gén.", value: moyenneGen > 0 ? moyenneGen.toFixed(2) : "—", color: "var(--violet)"   },
-      ]} />
+      <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+        {[
+          { label: "Total",     value: soutenances.length,                            color: "#2563eb", bg: "#dbeafe" },
+          { label: "Planifiées",value: count("PLANIFIEE"),                            color: "#3b82f6", bg: "#dbeafe" },
+          { label: "Terminées", value: count("TERMINEE"),                             color: "#10b981", bg: "#d1fae5" },
+          { label: "Moy. gén.", value: moyenneGen > 0 ? moyenneGen.toFixed(2) : "—", color: "#7c3aed", bg: "#ede9fe" },
+        ].map(s => (
+          <div key={s.label} style={{
+            background: s.bg, borderRadius: 12, padding: "14px 20px",
+            display: "flex", alignItems: "center", gap: 10, flex: 1,
+          }}>
+            <span style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: s.color, textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</span>
+          </div>
+        ))}
+      </div>
 
       {error && <Alert type="error" message={error} onClose={() => setError(null)} />}
 

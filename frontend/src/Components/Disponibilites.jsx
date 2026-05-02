@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import DisponibilitesProfs from "./DisponibilitesProfs";
-import { Calendar, MapPin, Users, Clock, CheckCircle, Filter, List } from "lucide-react";
 import { creneauApi, professeurApi } from "../api/api";
-import { StatBar, PageHeader, Tabs, Card, Alert, LoadingSkeleton, EmptyState } from "./ui";
+import { PageHeader, Tabs, Alert, LoadingSkeleton, EmptyState } from "./ui";
+import { Calendar, Users, List } from "lucide-react";
+import DisponibilitesProfs from "./DisponibilitesProfs";
 
 const DUREES = [
   { val: "20", label: "20 min" },
@@ -14,15 +14,20 @@ const DUREES = [
 const SALLES_CONFIG = ["Salle A1", "Salle A2", "Salle B1", "Amphithéâtre"];
 
 const inputStyle = {
-  padding: "8px 12px", borderRadius: 8,
-  border: "1px solid var(--border2)", background: "var(--surface2)",
+  padding: "9px 12px", borderRadius: 10,
+  border: "1px solid var(--border2)", background: "var(--surface)",
   color: "var(--text)", outline: "none", fontSize: 13, width: "100%",
+  boxSizing: "border-box", boxShadow: "var(--shadow-xs)",
+  transition: "border-color 0.15s, box-shadow 0.15s",
 };
 
 function FieldWrap({ label, children }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-      <label style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <label style={{
+        fontSize: 11, fontWeight: 700, color: "var(--text-3)",
+        textTransform: "uppercase", letterSpacing: "0.06em",
+      }}>
         {label}
       </label>
       {children}
@@ -31,35 +36,46 @@ function FieldWrap({ label, children }) {
 }
 
 function StepIndicator({ step }) {
+  const steps = [
+    { n: 1, label: "Date & heure" },
+    { n: 2, label: "Choisir salle" },
+    { n: 3, label: "Jury & confirmer" },
+  ];
   return (
-    <div style={{ display: "flex", alignItems: "center", marginBottom: 24 }}>
-      {[
-        { n: 1, label: "Date & heure" },
-        { n: 2, label: "Choisir salle" },
-        { n: 3, label: "Jury & confirmer" },
-      ].map((s, i) => {
+    <div style={{ display: "flex", alignItems: "center", marginBottom: 28 }}>
+      {steps.map((s, i) => {
         const done   = step > s.n;
         const active = step === s.n;
         return (
           <div key={s.n} style={{ display: "flex", alignItems: "center", flex: i < 2 ? 1 : "none" }}>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
               <div style={{
-                width: 28, height: 28, borderRadius: "50%",
-                background: done ? "#10b981" : active ? "#3b82f6" : "var(--surface2)",
-                border: `2px solid ${done ? "#10b981" : active ? "#3b82f6" : "var(--border2)"}`,
+                width: 32, height: 32, borderRadius: "50%",
+                background: done ? "var(--green)" : active ? "var(--blue-600)" : "var(--surface2)",
+                border: `2px solid ${done ? "var(--green)" : active ? "var(--blue-600)" : "var(--border2)"}`,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 12, fontWeight: 700,
-                color: done || active ? "#fff" : "var(--muted)",
+                fontSize: 13, fontWeight: 700,
+                color: done || active ? "#fff" : "var(--text-4)",
                 transition: "all 0.2s",
+                boxShadow: active ? "var(--shadow-blue)" : "none",
               }}>
                 {done ? "✓" : s.n}
               </div>
-              <div style={{ fontSize: 10, color: active ? "#3b82f6" : "var(--muted)", fontWeight: active ? 600 : 400, whiteSpace: "nowrap" }}>
+              <div style={{
+                fontSize: 11, fontWeight: active ? 700 : 400,
+                color: active ? "var(--blue-600)" : done ? "var(--green-text)" : "var(--text-4)",
+                whiteSpace: "nowrap",
+              }}>
                 {s.label}
               </div>
             </div>
             {i < 2 && (
-              <div style={{ flex: 1, height: 2, background: done ? "#10b981" : "var(--border2)", margin: "0 8px", marginBottom: 16, transition: "background 0.2s" }} />
+              <div style={{
+                flex: 1, height: 2,
+                background: done ? "var(--green)" : "var(--border2)",
+                margin: "0 10px 20px 10px",
+                transition: "background 0.3s",
+              }} />
             )}
           </div>
         );
@@ -110,7 +126,6 @@ function CreateurCreneau({ onCreated }) {
     try {
       const profs = await creneauApi.profsDispos(date, heureDebut, heureFin);
       setProfsDispos(profs);
-      // Pré-sélectionner uniquement les profs disponibles
       setJuryIds(profs.filter(p => p.disponible).map(p => String(p.id)));
       setStep(3);
     } catch (e) { setError(e.message); }
@@ -118,7 +133,6 @@ function CreateurCreneau({ onCreated }) {
   };
 
   const toggleProf = (prof) => {
-    // Bloquer si indisponible
     if (!prof.disponible) return;
     const sid = String(prof.id);
     setJuryIds(p => p.includes(sid) ? p.filter(x => x !== sid) : [...p, sid]);
@@ -143,7 +157,7 @@ function CreateurCreneau({ onCreated }) {
         setSallesLibres([]); setSalleChoisie(null);
         setProfsDispos([]); setJuryIds([]);
         onCreated();
-      }, 1500);
+      }, 1800);
     } catch (e) { setError(e.message); }
     finally { setCreating(false); }
   };
@@ -158,167 +172,223 @@ function CreateurCreneau({ onCreated }) {
   const profsSelectionnes = profsDispos.filter(p => juryIds.includes(String(p.id)));
 
   return (
-    <div style={{ background: "var(--surface)", border: "1px solid var(--border2)", borderRadius: 14, padding: "24px" }}>
+    <div style={{
+      background: "var(--surface)", borderRadius: "var(--r-xl)",
+      border: "1px solid var(--border2)", padding: "28px 32px",
+      boxShadow: "var(--shadow-sm)",
+    }}>
       <StepIndicator step={step} />
 
       {error && (
-        <div style={{ background: "#fee2e2", border: "1px solid #ef4444", color: "#991b1b", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 14 }}>
+        <div style={{
+          background: "var(--red-bg)", border: "1px solid var(--red)",
+          color: "var(--red-text)", borderRadius: "var(--r-md)",
+          padding: "10px 14px", fontSize: 13, fontWeight: 500, marginBottom: 20,
+        }}>
           {error}
         </div>
       )}
+
       {success && (
-        <div style={{ background: "#d1fae5", border: "1px solid #10b981", color: "#065f46", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 14, fontWeight: 600, textAlign: "center" }}>
-          Créneau créé avec succès.
+        <div style={{
+          background: "var(--green-bg)", border: "1px solid var(--green)",
+          color: "var(--green-text)", borderRadius: "var(--r-md)",
+          padding: "12px 16px", fontSize: 14, fontWeight: 700,
+          marginBottom: 20, textAlign: "center",
+        }}>
+          Créneau créé avec succès ✓
         </div>
       )}
 
-      {/* ÉTAPE 1 */}
+      {/* ── STEP 1: Date & heure ── */}
       {step === 1 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <FieldWrap label="Date">
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <FieldWrap label="Date de la soutenance">
+            <input type="date" value={date}
+              onChange={e => setDate(e.target.value)}
+              style={inputStyle}
+              onFocus={e => { e.target.style.borderColor = "var(--blue-500)"; e.target.style.boxShadow = "0 0 0 3px rgba(59,130,246,0.12)"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border2)"; e.target.style.boxShadow = "var(--shadow-xs)"; }}
+            />
           </FieldWrap>
           <FieldWrap label="Heure de début">
-            <input type="time" value={heureDebut} onChange={e => setHeureDebut(e.target.value)} style={inputStyle} />
+            <input type="time" value={heureDebut}
+              onChange={e => setHeureDebut(e.target.value)}
+              style={inputStyle}
+              onFocus={e => { e.target.style.borderColor = "var(--blue-500)"; e.target.style.boxShadow = "0 0 0 3px rgba(59,130,246,0.12)"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border2)"; e.target.style.boxShadow = "var(--shadow-xs)"; }}
+            />
           </FieldWrap>
           <FieldWrap label="Durée">
             <select value={duree} onChange={e => setDuree(e.target.value)} style={inputStyle}>
               {DUREES.map(d => <option key={d.val} value={d.val}>{d.label}</option>)}
             </select>
           </FieldWrap>
+
           {heureDebut && (
-            <div style={{ fontSize: 12, color: "var(--muted)", background: "var(--surface2)", borderRadius: 8, padding: "8px 12px", fontFamily: "'DM Mono', monospace" }}>
-              {heureDebut} → {heureFin}
+            <div style={{
+              background: "var(--blue-50)", border: "1px solid var(--blue-200)",
+              borderRadius: "var(--r-md)", padding: "10px 14px",
+              fontSize: 13, color: "var(--blue-700)", fontFamily: "'JetBrains Mono', monospace",
+              fontWeight: 600,
+            }}>
+              Créneau : {heureDebut} → {heureFin}
             </div>
           )}
-          <button onClick={handleCheckSalles} disabled={loading || !date || !heureDebut}
-            style={{ padding: "11px", borderRadius: 8, border: "none", background: "#3b82f6", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: !date || !heureDebut ? 0.5 : 1 }}>
-            {loading ? "Vérification..." : "Voir les salles"}
+
+          <button onClick={handleCheckSalles}
+            disabled={loading || !date || !heureDebut}
+            style={{
+              padding: "12px", borderRadius: "var(--r-md)", border: "none",
+              background: !date || !heureDebut ? "var(--surface3)" : "var(--blue-600)",
+              color: !date || !heureDebut ? "var(--text-4)" : "#fff",
+              fontSize: 14, fontWeight: 700, cursor: !date || !heureDebut ? "not-allowed" : "pointer",
+              boxShadow: !date || !heureDebut ? "none" : "var(--shadow-blue)",
+              transition: "all 0.15s",
+            }}>
+            {loading ? "Vérification..." : "Voir les salles disponibles →"}
           </button>
         </div>
       )}
 
-      {/* ÉTAPE 2 */}
+      {/* ── STEP 2: Choisir salle ── */}
       {step === 2 && (
         <div>
-          <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text)", marginBottom: 4 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
             {date} · {heureDebut} → {heureFin}
           </div>
-          <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 14 }}>
-            Vert = libre · Ambre = déjà un créneau (sélectionnable quand même)
+          <div style={{ fontSize: 12, color: "var(--text-3)", marginBottom: 20 }}>
+            Vert = libre · Ambre = créneau existant (sélectionnable quand même)
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
             {SALLES_CONFIG.map(salle => {
               const libre = sallesLibres.includes(salle);
               return (
-                <div key={salle} onClick={() => !loading && handleChoixSalle(salle)}
+                <div key={salle}
+                  onClick={() => !loading && handleChoixSalle(salle)}
                   style={{
-                    padding: "14px 18px", borderRadius: 10, cursor: "pointer",
-                    border: `1px solid ${libre ? "#10b981" : "#f59e0b"}`,
-                    background: libre ? "#d1fae5" : "#fef3c7",
+                    padding: "16px 20px", borderRadius: "var(--r-lg)", cursor: "pointer",
+                    border: `1.5px solid ${libre ? "var(--green)" : "var(--amber)"}`,
+                    background: libre ? "var(--green-bg)" : "var(--amber-bg)",
                     display: "flex", alignItems: "center", justifyContent: "space-between",
                     opacity: loading ? 0.6 : 1,
-                    transition: "transform 0.1s",
+                    transition: "transform 0.1s, box-shadow 0.1s",
                   }}
-                  onMouseEnter={e => { if (!loading) e.currentTarget.style.transform = "translateY(-1px)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = "none"; }}
+                  onMouseEnter={e => { if (!loading) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "var(--shadow-md)"; } }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}
                 >
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: libre ? "#065f46" : "#92400e" }}>{salle}</div>
-                    <div style={{ fontSize: 11, color: libre ? "#10b981" : "#f59e0b", marginTop: 2 }}>
-                      {libre ? "Disponible" : "Créneau existant — sélectionner quand même ?"}
+                    <div style={{ fontSize: 15, fontWeight: 700, color: libre ? "var(--green-text)" : "var(--amber-text)" }}>
+                      {salle}
+                    </div>
+                    <div style={{ fontSize: 11, color: libre ? "var(--green)" : "var(--amber)", marginTop: 2, fontWeight: 500 }}>
+                      {libre ? "Disponible sur ce créneau" : "Créneau existant — sélectionner quand même ?"}
                     </div>
                   </div>
-                  <span style={{ fontSize: 16, color: libre ? "#10b981" : "#f59e0b" }}>→</span>
+                  <span style={{ fontSize: 20, color: libre ? "var(--green)" : "var(--amber)" }}>→</span>
                 </div>
               );
             })}
           </div>
+
           <button onClick={reset}
-            style={{ width: "100%", padding: "8px", borderRadius: 8, border: "1px solid var(--border2)", background: "transparent", color: "var(--muted)", fontSize: 13, cursor: "pointer" }}>
-            Modifier la date / heure
+            style={{
+              width: "100%", padding: "10px", borderRadius: "var(--r-md)",
+              border: "1px solid var(--border2)", background: "transparent",
+              color: "var(--text-3)", fontSize: 13, cursor: "pointer", fontWeight: 500,
+            }}>
+            ← Modifier la date / heure
           </button>
         </div>
       )}
 
-      {/* ÉTAPE 3 */}
+      {/* ── STEP 3: Jury & confirmer ── */}
       {step === 3 && (
         <div>
-          {/* Récap */}
-          <div style={{ background: "#dbeafe", border: "1px solid #3b82f6", borderRadius: 10, padding: "14px 16px", marginBottom: 20 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "#1e40af", marginBottom: 4 }}>Créneau à créer</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "#1e40af" }}>{salleChoisie}</div>
-            <div style={{ fontSize: 12, color: "#3b82f6", marginTop: 3, fontFamily: "'DM Mono', monospace" }}>
+          {/* Recap */}
+          <div style={{
+            background: "var(--blue-50)", border: "1px solid var(--blue-200)",
+            borderRadius: "var(--r-lg)", padding: "16px 20px", marginBottom: 24,
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--blue-700)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>
+              Créneau à créer
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--blue-700)" }}>{salleChoisie}</div>
+            <div style={{ fontSize: 13, color: "var(--blue-600)", marginTop: 3, fontFamily: "'JetBrains Mono', monospace" }}>
               {date} · {heureDebut} — {heureFin} · {duree} min
             </div>
           </div>
 
-          {/* Sélection jury */}
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
+          {/* Prof selection */}
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", marginBottom: 4 }}>
               Sélectionner le jury
             </div>
-            <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 10 }}>
+            <div style={{ fontSize: 11, color: "var(--text-3)", marginBottom: 14 }}>
               Les profs indisponibles ne peuvent pas être sélectionnés.
               {juryIds.length > 0 && (
-                <span style={{ color: "#3b82f6", fontWeight: 600, marginLeft: 6 }}>
+                <span style={{ color: "var(--blue-600)", fontWeight: 700, marginLeft: 8 }}>
                   {juryIds.length} sélectionné{juryIds.length > 1 ? "s" : ""}
                 </span>
               )}
             </div>
 
             {loading ? (
-              <div style={{ fontSize: 13, color: "var(--muted)" }}>Chargement...</div>
+              <div style={{ fontSize: 13, color: "var(--text-4)" }}>Chargement...</div>
             ) : profsDispos.length === 0 ? (
-              <div style={{ fontSize: 13, color: "var(--muted)", padding: "12px", background: "var(--surface2)", borderRadius: 8 }}>
+              <div style={{
+                fontSize: 13, color: "var(--text-4)", padding: "14px",
+                background: "var(--surface2)", borderRadius: "var(--r-md)",
+              }}>
                 Aucune donnée de disponibilité pour ce jour.
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {profsDispos.map(p => {
-                  const isSelected  = juryIds.includes(String(p.id));
-                  const isIndispo   = !p.disponible;
+                  const isSelected = juryIds.includes(String(p.id));
+                  const isIndispo  = !p.disponible;
                   return (
                     <div key={p.id}
                       onClick={() => toggleProf(p)}
                       style={{
                         display: "flex", alignItems: "center", justifyContent: "space-between",
-                        padding: "10px 14px", borderRadius: 8,
+                        padding: "12px 16px", borderRadius: "var(--r-md)",
                         cursor: isIndispo ? "not-allowed" : "pointer",
-                        border: `1px solid ${isIndispo ? "#fca5a5" : isSelected ? "#3b82f6" : "#10b981"}`,
-                        background: isIndispo ? "#fef2f2" : isSelected ? "#dbeafe" : "#f0fdf4",
+                        border: `1.5px solid ${isIndispo ? "var(--red-bg)" : isSelected ? "var(--blue-500)" : "var(--green)"}`,
+                        background: isIndispo ? "var(--red-bg)" : isSelected ? "var(--blue-50)" : "var(--green-bg)",
                         opacity: isIndispo ? 0.6 : 1,
                         transition: "all 0.15s",
                       }}>
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: isSelected ? 600 : 400, color: isIndispo ? "#991b1b" : isSelected ? "#1e40af" : "#065f46" }}>
+                        <div style={{ fontSize: 13, fontWeight: isSelected ? 700 : 500, color: isIndispo ? "var(--red-text)" : isSelected ? "var(--blue-700)" : "var(--green-text)" }}>
                           {p.nom}
                         </div>
-                        <div style={{ fontSize: 11, color: "var(--muted)" }}>{p.departement}</div>
+                        <div style={{ fontSize: 11, color: "var(--text-4)", marginTop: 1 }}>{p.departement}</div>
                       </div>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                         <span style={{
-                          fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20,
-                          background: isIndispo ? "#ef4444" : "#10b981", color: "#fff",
+                          fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
+                          background: isIndispo ? "var(--red)" : "var(--green)", color: "#fff",
                         }}>
                           {isIndispo ? "Indisponible" : "Disponible"}
                         </span>
                         {!isIndispo && (
                           <div style={{
-                            width: 18, height: 18, borderRadius: 4, flexShrink: 0,
-                            border: `1.5px solid ${isSelected ? "#3b82f6" : "var(--border2)"}`,
-                            background: isSelected ? "#3b82f6" : "transparent",
+                            width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+                            border: `2px solid ${isSelected ? "var(--blue-600)" : "var(--border2)"}`,
+                            background: isSelected ? "var(--blue-600)" : "transparent",
                             display: "flex", alignItems: "center", justifyContent: "center",
                           }}>
-                            {isSelected && <span style={{ color: "#fff", fontSize: 11, fontWeight: 700 }}>✓</span>}
+                            {isSelected && <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>✓</span>}
                           </div>
                         )}
                         {isIndispo && (
                           <div style={{
-                            width: 18, height: 18, borderRadius: 4, flexShrink: 0,
-                            background: "#fca5a5", display: "flex", alignItems: "center", justifyContent: "center",
+                            width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+                            background: "var(--red)", display: "flex", alignItems: "center", justifyContent: "center",
                           }}>
-                            <span style={{ color: "#fff", fontSize: 11, fontWeight: 700 }}>✕</span>
+                            <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>✕</span>
                           </div>
                         )}
                       </div>
@@ -329,127 +399,45 @@ function CreateurCreneau({ onCreated }) {
             )}
           </div>
 
-          {/* Récap jury sélectionné */}
+          {/* Jury recap */}
           {juryIds.length > 0 && (
-            <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8, padding: "10px 14px", marginBottom: 16 }}>
-              <div style={{ fontSize: 11, color: "#1e40af", fontWeight: 600, marginBottom: 4 }}>Jury du créneau :</div>
-              <div style={{ fontSize: 12, color: "#1e40af" }}>
+            <div style={{
+              background: "var(--blue-50)", border: "1px solid var(--blue-200)",
+              borderRadius: "var(--r-md)", padding: "10px 16px", marginBottom: 20,
+            }}>
+              <div style={{ fontSize: 11, color: "var(--blue-700)", fontWeight: 700, marginBottom: 4 }}>
+                Jury sélectionné :
+              </div>
+              <div style={{ fontSize: 13, color: "var(--blue-700)" }}>
                 {profsSelectionnes.map(p => p.nom).join(" · ")}
               </div>
             </div>
           )}
 
           <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={handleCreer} disabled={creating || juryIds.length === 0}
+            <button onClick={handleCreer}
+              disabled={creating || juryIds.length === 0}
               style={{
-                flex: 1, padding: "11px", borderRadius: 8, border: "none",
-                background: juryIds.length === 0 ? "var(--surface2)" : "#10b981",
-                color: juryIds.length === 0 ? "var(--muted)" : "#fff",
-                fontSize: 13, fontWeight: 600, cursor: juryIds.length === 0 ? "not-allowed" : "pointer",
+                flex: 1, padding: "12px", borderRadius: "var(--r-md)", border: "none",
+                background: juryIds.length === 0 ? "var(--surface3)" : "var(--green)",
+                color: juryIds.length === 0 ? "var(--text-4)" : "#fff",
+                fontSize: 14, fontWeight: 700,
+                cursor: juryIds.length === 0 ? "not-allowed" : "pointer",
                 opacity: creating ? 0.6 : 1,
+                transition: "all 0.15s",
               }}>
-              {creating ? "Création..." : juryIds.length === 0 ? "Sélectionnez au moins 1 prof" : "Créer ce créneau"}
+              {creating ? "Création..." : juryIds.length === 0 ? "Sélectionnez au moins 1 prof" : "✓ Créer ce créneau"}
             </button>
             <button onClick={() => setStep(2)}
-              style={{ padding: "11px 16px", borderRadius: 8, border: "1px solid var(--border2)", background: "transparent", color: "var(--muted)", fontSize: 13, cursor: "pointer" }}>
+              style={{
+                padding: "12px 20px", borderRadius: "var(--r-md)",
+                border: "1px solid var(--border2)", background: "transparent",
+                color: "var(--text-3)", fontSize: 13, cursor: "pointer",
+              }}>
               Retour
             </button>
           </div>
         </div>
-      )}
-    </div>
-  );
-}
-
-function VerificateurDispo() {
-  const [profs, setProfs]           = useState([]);
-  const [loadingProfs, setLoadingProfs] = useState(true);
-  const [selectedProfId, setSelectedProfId] = useState("");
-  const [date, setDate]             = useState("");
-  const [result, setResult]         = useState(null);
-  const [checking, setChecking]     = useState(false);
-
-  useEffect(() => {
-    professeurApi.getAll().then(setProfs).catch(() => {}).finally(() => setLoadingProfs(false));
-  }, []);
-
-  const selectedProf = profs.find(p => String(p.id) === String(selectedProfId));
-
-  const handleCheck = async () => {
-    if (!selectedProfId || !date) return;
-    setChecking(true); setResult(null);
-    try {
-      const data = await professeurApi.checkDisponibilite(selectedProfId, date);
-      setResult(data);
-    } catch (e) { setResult({ error: e.message }); }
-    finally { setChecking(false); }
-  };
-
-  return (
-    <div style={{ background: "var(--surface)", border: "1px solid var(--border2)", borderRadius: 14, padding: "24px" }}>
-      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>Vérifier la disponibilité</div>
-      <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 16 }}>Sélectionnez un professeur et une date</div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 14 }}>
-        <FieldWrap label="Professeur">
-          {loadingProfs ? (
-            <div style={{ ...inputStyle, color: "var(--muted)" }}>Chargement...</div>
-          ) : (
-            <select value={selectedProfId} onChange={e => { setSelectedProfId(e.target.value); setResult(null); }} style={inputStyle}>
-              <option value="">-- Sélectionner --</option>
-              {profs.map(p => <option key={p.id} value={p.id}>{p.nom} — {p.departement}</option>)}
-            </select>
-          )}
-        </FieldWrap>
-        <FieldWrap label="Date">
-          <input type="date" value={date} onChange={e => { setDate(e.target.value); setResult(null); }} style={inputStyle} />
-        </FieldWrap>
-        <button onClick={handleCheck} disabled={!selectedProfId || !date || checking}
-          style={{ padding: "10px", borderRadius: 8, border: "none", background: "#3b82f6", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: !selectedProfId || !date ? 0.5 : 1 }}>
-          {checking ? "Vérification..." : "Vérifier"}
-        </button>
-      </div>
-
-      {result && !result.error && (
-        result.disponible ? (
-          <div style={{ background: "#d1fae5", border: "1px solid #10b981", borderRadius: 10, padding: "14px 16px" }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#065f46", marginBottom: 6 }}>
-              {selectedProf?.nom} est disponible le {date}
-            </div>
-            {result.plages?.map((p, i) => (
-              <div key={i} style={{ fontSize: 12, color: "#065f46", fontFamily: "'DM Mono', monospace" }}>
-                {p.heureDebut} — {p.heureFin}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ background: "#fee2e2", border: "1px solid #ef4444", borderRadius: 10, padding: "14px 16px" }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#991b1b" }}>
-                {selectedProf?.nom} n'est pas disponible le {date}
-              </div>
-            </div>
-            {result.prochaineDatesDisponibles?.length > 0 && (
-              <div style={{ background: "#fef3c7", border: "1px solid #f59e0b", borderRadius: 10, padding: "14px 16px" }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "#92400e", marginBottom: 10 }}>Prochaines dates disponibles</div>
-                {result.prochaineDatesDisponibles.map((d, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, padding: "8px 12px", background: "#fff", borderRadius: 8, border: "1px solid #f59e0b" }}>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "#92400e" }}>{d.date}</div>
-                      {d.plages?.map((p, j) => (
-                        <div key={j} style={{ fontSize: 11, color: "#f59e0b", fontFamily: "'DM Mono', monospace" }}>{p.heureDebut} — {p.heureFin}</div>
-                      ))}
-                    </div>
-                    <button onClick={() => setDate(d.date)}
-                      style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #f59e0b", background: "#f59e0b", color: "#fff", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
-                      Utiliser
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )
       )}
     </div>
   );
@@ -471,8 +459,7 @@ export default function Disponibilites() {
 
   useEffect(() => { loadCreneaux(); }, [loadCreneaux]);
 
-  // Only show creneaux that have jury + salle (valid creneaux)
-  const creneauxValides = creneaux.filter(c => c.jury?.length > 0 && c.salle);
+  const creneauxValides  = creneaux.filter(c => c.jury?.length > 0 && c.salle);
   const filteredCreneaux = creneauxValides.filter(c => {
     const salleOk  = filterSalle  === "TOUT" || c.salle  === filterSalle;
     const statutOk = filterStatut === "TOUT" || c.statut === filterStatut;
@@ -483,22 +470,36 @@ export default function Disponibilites() {
   const countOccupe = creneauxValides.filter(c => c.statut === "OCCUPE").length;
 
   const TABS = [
-    { id: "creer",  label: "Créer un créneau",         icon: Calendar },
-    { id: "dispos", label: "Disponibilités des profs",  icon: Users    },
-    { id: "liste",  label: "Tous les créneaux",         icon: List },
+    { id: "creer",  label: "Créer un créneau",        icon: Calendar                             },
+    { id: "dispos", label: "Disponibilités des profs", icon: Users                                },
+    { id: "liste",  label: "Tous les créneaux",        icon: List, count: creneauxValides.length  },
   ];
 
   return (
     <div style={{ animation: "fadeUp 0.4s cubic-bezier(0.16,1,0.3,1)" }}>
-      <style>{`input[type="date"]::-webkit-calendar-picker-indicator,input[type="time"]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:0.6}`}</style>
+      <style>{`
+        input[type="date"]::-webkit-calendar-picker-indicator,
+        input[type="time"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.6; }
+      `}</style>
 
-      <PageHeader phase={2} title="Disponibilités & Créneaux" subtitle="Créez des créneaux et vérifiez la disponibilité des professeurs" />
+      <PageHeader phase={2} title="Disponibilités & Créneaux"
+        subtitle="Créez des créneaux et vérifiez la disponibilité des professeurs" />
 
-      <StatBar stats={[
-        { label: "Créneaux valides", value: creneauxValides.length,                              color: "var(--blue-600)" },
-        { label: "Disponibles",    value: countDispo,  total: creneaux.length,          color: "var(--green)"    },
-        { label: "Occupés",        value: countOccupe, total: creneaux.length,          color: "var(--amber)"    },
-      ]} />
+      <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+        {[
+          { label: "Créneaux valides", value: creneauxValides.length, color: "#2563eb", bg: "#dbeafe" },
+          { label: "Disponibles",      value: countDispo,             color: "#10b981", bg: "#d1fae5" },
+          { label: "Occupés",          value: countOccupe,            color: "#f59e0b", bg: "#fef3c7" },
+        ].map(s => (
+          <div key={s.label} style={{
+            background: s.bg, borderRadius: 12, padding: "14px 20px",
+            display: "flex", alignItems: "center", gap: 10, flex: 1,
+          }}>
+            <span style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: s.color, textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</span>
+          </div>
+        ))}
+      </div>
 
       <Tabs tabs={TABS} active={activeTab} onChange={setActiveTab} />
 
@@ -507,7 +508,7 @@ export default function Disponibilites() {
 
       {activeTab === "liste" && (
         <div>
-          <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap", alignItems: "center" }}>
             <select value={filterSalle} onChange={e => setFilterSalle(e.target.value)}
               style={{ ...inputStyle, width: "auto", padding: "7px 12px" }}>
               <option value="TOUT">Toutes les salles</option>
@@ -519,47 +520,46 @@ export default function Disponibilites() {
               <option value="DISPONIBLE">Disponible</option>
               <option value="OCCUPE">Occupé</option>
             </select>
-            <div style={{ fontSize: 12, color: "var(--muted)" }}>
+            <div style={{ fontSize: 12, color: "var(--text-3)", fontWeight: 500 }}>
               {filteredCreneaux.length} créneau{filteredCreneaux.length !== 1 ? "x" : ""}
             </div>
           </div>
 
           {loadingC ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {[1,2,3].map(i => <div key={i} style={{ height: 72, borderRadius: 10, background: "var(--surface)", border: "1px solid var(--border)", opacity: 1 - i * 0.2 }} />)}
-            </div>
+            <LoadingSkeleton rows={3} height={72} />
           ) : filteredCreneaux.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "48px 0", color: "var(--muted)" }}>Aucun créneau trouvé.</div>
+            <EmptyState icon={List} title="Aucun créneau" description="Aucun créneau valide trouvé." />
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {filteredCreneaux.map(c => {
                 const isOccupe = c.statut === "OCCUPE";
-                const juryNoms = c.jury?.map(j => j.nom).join(" · ") || "Aucun jury";
+                const juryNoms = c.jury?.map(j => j.nom).join(" · ") || "—";
                 return (
                   <div key={c.id} style={{
                     background: "var(--surface)",
-                    border: `1px solid ${isOccupe ? "#f59e0b" : "#10b981"}`,
-                    borderLeft: `4px solid ${isOccupe ? "#f59e0b" : "#10b981"}`,
-                    borderRadius: 10, padding: "14px 18px",
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    gap: 16,
+                    border: `1px solid ${isOccupe ? "var(--amber)" : "var(--green)"}`,
+                    borderLeft: `4px solid ${isOccupe ? "var(--amber)" : "var(--green)"}`,
+                    borderRadius: "var(--r-lg)", padding: "14px 20px",
+                    display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16,
+                    boxShadow: "var(--shadow-xs)",
                   }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 3 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 3 }}>
                         {c.salle}
                       </div>
-                      <div style={{ fontSize: 12, color: "var(--muted)", fontFamily: "'DM Mono', monospace", marginBottom: 4 }}>
+                      <div style={{ fontSize: 12, color: "var(--text-3)", fontFamily: "'JetBrains Mono', monospace", marginBottom: 4 }}>
                         {c.date} · {c.heureDebut} — {c.heureFin} · {c.dureeMinutes} min
                       </div>
-                      <div style={{ fontSize: 11, color: "#3b82f6", fontWeight: 500 }}>
+                      <div style={{ fontSize: 11, color: "var(--blue-600)", fontWeight: 600 }}>
                         Jury : {juryNoms}
                       </div>
                     </div>
                     <span style={{
-                      fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, whiteSpace: "nowrap",
-                      background: isOccupe ? "#fef3c7" : "#d1fae5",
-                      color: isOccupe ? "#92400e" : "#065f46",
-                      border: `1px solid ${isOccupe ? "#f59e0b" : "#10b981"}`,
+                      fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 20,
+                      background: isOccupe ? "var(--amber-bg)" : "var(--green-bg)",
+                      color: isOccupe ? "var(--amber-text)" : "var(--green-text)",
+                      border: `1px solid ${isOccupe ? "var(--amber)" : "var(--green)"}`,
+                      whiteSpace: "nowrap",
                     }}>
                       {isOccupe ? "Occupé" : "Disponible"}
                     </span>

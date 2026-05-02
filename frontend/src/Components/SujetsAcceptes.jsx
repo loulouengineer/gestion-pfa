@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { affectationApi } from "../api/api";
-import { Card, StatBar, PageHeader, LoadingSkeleton, EmptyState, Alert, Badge } from "./ui";
+import { Card, PageHeader, LoadingSkeleton, EmptyState, Alert, Badge } from "./ui";
 import { CheckSquare, Search, User, Users, BookOpen } from "lucide-react";
 
 export default function SujetsAcceptes() {
@@ -35,10 +35,20 @@ export default function SujetsAcceptes() {
       <PageHeader phase="✅" title="Sujets acceptés"
         subtitle="Liste des sujets validés et leurs binômes affectés" />
 
-      <StatBar stats={[
-        { label: "Total validés", value: affectations.length, color: "var(--green)" },
-        { label: "Affichés",      value: filtered.length,     color: "var(--blue-600)" },
-      ]} />
+      <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+        {[
+          { label: "Total validés", value: affectations.length, color: "#10b981", bg: "#d1fae5" },
+          { label: "Affichés",      value: filtered.length,     color: "#2563eb", bg: "#dbeafe" },
+        ].map(s => (
+          <div key={s.label} style={{
+            background: s.bg, borderRadius: 12, padding: "14px 20px",
+            display: "flex", alignItems: "center", gap: 10, flex: 1,
+          }}>
+            <span style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: s.color, textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</span>
+          </div>
+        ))}
+      </div>
 
       {error && <Alert type="error" message={error} onClose={() => setError(null)} />}
 

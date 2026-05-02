@@ -86,12 +86,12 @@ export default function EtudiantApp({ etudiant, onLogout }) {
           <button onClick={onLogout}
             style={{
               display: "flex", alignItems: "center", gap: 7, padding: "8px 14px",
-              borderRadius: 8, border: "1px solid rgba(239,68,68,0.2)",
-              background: "rgba(239,68,68,0.06)", color: "#f87171",
+              borderRadius: 8, border: "1px solid rgba(255,255,255,0.15)",
+              background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.8)",
               fontSize: 12, fontWeight: 600, cursor: "pointer",
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.12)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "rgba(239,68,68,0.06)"; }}>
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.15)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}>
             <LogOut size={13} /> Se déconnecter
           </button>
         </div>

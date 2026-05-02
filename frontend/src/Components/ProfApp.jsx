@@ -3,7 +3,7 @@ import { Calendar, MessageCircle, BookOpen, ClipboardList, LogOut, ChevronRight 
 import { chatApi } from "../api/api";
 import ProfSoutenances    from "./ProfSoutenances";
 import ProfDisponibilites from "./ProfDisponibilites";
-import DashebordProf      from "./DashebordProf";
+import ProfSujets         from "./ProfSujets";
 import ProfChat           from "./ProfChat";
 
 const POLL_MS = 8000;
@@ -62,6 +62,7 @@ export default function ProfApp({ prof, onLogout }) {
   const [chatUnread, setChatUnread] = useState(0);
 
   useEffect(() => {
+    if (!prof.id) return;
     const fetch = async () => {
       try { const c = await chatApi.getUnread(prof.id); setChatUnread(c.count || 0); } catch {}
     };
@@ -78,7 +79,8 @@ export default function ProfApp({ prof, onLogout }) {
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
       <aside style={{
-        width: 240, flexShrink: 0, background: "#0f172a",
+        width: 240, flexShrink: 0,
+        background: "#0f172a",
         display: "flex", flexDirection: "column",
         height: "100vh", position: "sticky", top: 0, overflow: "hidden",
       }}>
@@ -123,12 +125,12 @@ export default function ProfApp({ prof, onLogout }) {
             style={{
               display: "flex", alignItems: "center", gap: 8,
               width: "100%", padding: "8px 10px", borderRadius: 8,
-              border: "1px solid rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.06)",
-              cursor: "pointer", color: "#f87171", fontSize: 12, fontWeight: 600,
+              border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.08)",
+              cursor: "pointer", color: "rgba(255,255,255,0.75)", fontSize: 12, fontWeight: 600,
               transition: "all 0.15s",
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.12)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "rgba(239,68,68,0.06)"; }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.15)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}
           >
             <LogOut size={13} /> Se déconnecter
           </button>
@@ -144,7 +146,7 @@ export default function ProfApp({ prof, onLogout }) {
         <div style={{ position: "relative", zIndex: 1, maxWidth: 1000, margin: "0 auto" }}>
           {active === "soutenances"    && <ProfSoutenances    prof={prof} />}
           {active === "disponibilites" && <ProfDisponibilites prof={prof} />}
-          {active === "sujets"         && <DashebordProf />}
+          {active === "sujets"         && <ProfSujets prof={prof} />}
           {active === "chat"           && <ProfChat           prof={prof} />}
         </div>
       </main>

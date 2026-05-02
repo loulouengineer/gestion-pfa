@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
 import { affectationApi, soutenanceApi, creneauApi, professeurApi } from "../api/api";
-import { StatBar, PageHeader, Card, Alert, EmptyState, LoadingSkeleton, Button, Badge } from "./ui";
+import { PageHeader, Card, Alert, EmptyState, LoadingSkeleton, Button, Badge } from "./ui";
 import { Layout, Zap, Users, MapPin, Clock, Calendar, CheckCircle, X, Info, Trash2 } from "lucide-react";
 
 // ── Modal détail créneau/soutenance ───────────────────
@@ -596,11 +596,21 @@ export default function Planification() {
         )}
       />
 
-      <StatBar stats={[
-        { label: "À planifier",     value: aplanifier.length,                                                   color: "var(--amber)"    },
-        { label: "Planifiées",      value: soutenances.length, total: aplanifier.length + soutenances.length,  color: "var(--blue-600)" },
-        { label: "Créneaux libres", value: creneaux.filter(c => c.statut === "DISPONIBLE").length,              color: "var(--green)"    },
-      ]} />
+      <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+        {[
+          { label: "À planifier",     value: aplanifier.length,                                      color: "#f59e0b", bg: "#fef3c7" },
+          { label: "Planifiées",      value: soutenances.length,                                     color: "#2563eb", bg: "#dbeafe" },
+          { label: "Créneaux libres", value: creneaux.filter(c => c.statut === "DISPONIBLE").length, color: "#10b981", bg: "#d1fae5" },
+        ].map(s => (
+          <div key={s.label} style={{
+            background: s.bg, borderRadius: 12, padding: "14px 20px",
+            display: "flex", alignItems: "center", gap: 10, flex: 1,
+          }}>
+            <span style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: s.color, textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</span>
+          </div>
+        ))}
+      </div>
 
       {error   && <Alert type="error"   message={error}   onClose={() => setError(null)}   />}
       {success && <Alert type="success" message={success} onClose={() => setSuccess(null)} />}

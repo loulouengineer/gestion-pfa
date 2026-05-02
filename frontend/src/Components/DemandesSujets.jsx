@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { sujetApi, affectationApi } from "../api/api";
-import { PageHeader, StatBar, Alert, LoadingSkeleton, EmptyState, Badge, Button } from "./ui";
+import { PageHeader, Alert, LoadingSkeleton, EmptyState, Badge, Button } from "./ui";
 import { ClipboardList, CheckCircle, XCircle, Clock, Filter, Users, BookOpen, Star } from "lucide-react";
 
 const STATUS_CONFIG = {
@@ -218,12 +218,22 @@ export default function DemandesSujets() {
       <PageHeader phase="📋" title="Demandes de sujets"
         subtitle="Requêtes des étudiants — les demandes en attente sont prioritaires" />
 
-      <StatBar stats={[
-        { label: "En attente", value: count("EN_ATTENTE"), total: demandes.length, color: "var(--amber)"    },
-        { label: "Validées",   value: count("VALIDEE"),    total: demandes.length, color: "var(--green)"    },
-        { label: "Refusées",   value: count("REFUSEE"),    total: demandes.length, color: "var(--red)"      },
-        { label: "Total",      value: demandes.length,                             color: "var(--blue-600)" },
-      ]} />
+      <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+        {[
+          { label: "En attente", value: count("EN_ATTENTE"), color: "#f59e0b", bg: "#fef3c7" },
+          { label: "Validées",   value: count("VALIDEE"),    color: "#10b981", bg: "#d1fae5" },
+          { label: "Refusées",   value: count("REFUSEE"),    color: "#ef4444", bg: "#fee2e2" },
+          { label: "Total",      value: demandes.length,     color: "#2563eb", bg: "#dbeafe" },
+        ].map(s => (
+          <div key={s.label} style={{
+            background: s.bg, borderRadius: 12, padding: "14px 20px",
+            display: "flex", alignItems: "center", gap: 10, flex: 1,
+          }}>
+            <span style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: s.color, textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</span>
+          </div>
+        ))}
+      </div>
 
       {error   && <Alert type="error"   message={error}   onClose={() => setError(null)}   />}
       {success && <Alert type="success" message={success} onClose={() => setSuccess(null)} />}

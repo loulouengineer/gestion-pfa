@@ -55,6 +55,7 @@ export default function ProfChat({ prof }) {
   const pollRef                 = useRef(null);
 
   const loadMessages = useCallback(async () => {
+    if (!prof.id) { setLoading(false); return; }
     try {
       const msgs = await chatApi.getConversation(prof.id, ADMIN_ID);
       setMessages(msgs);

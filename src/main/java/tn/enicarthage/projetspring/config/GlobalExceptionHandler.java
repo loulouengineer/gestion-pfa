@@ -29,6 +29,7 @@ public class GlobalExceptionHandler {
     // ── Business logic: not found / bad arg → 400 ────────────────────────────
     @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
     public ResponseEntity<Map<String, String>> handleBusinessError(RuntimeException ex) {
+        ex.printStackTrace();
         return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
     }
 

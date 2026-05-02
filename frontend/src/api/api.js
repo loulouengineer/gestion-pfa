@@ -135,6 +135,7 @@ export const disponibiliteApi = {
 ══════════════════════════════════════════════════ */
 export const professeurApi = {
   getAll:             () => api.get('/professeurs').then(r => r.data),
+  getByEmail:         (email) => api.get('/professeurs/by-email', { params: { email } }).then(r => r.data),
   checkDisponibilite: (id, date) => api.get(`/professeurs/${id}/disponibilite`, { params: { date } }).then(r => r.data),
 };
 

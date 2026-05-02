@@ -1,254 +1,575 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";
-import interactionPlugin from "@fullcalendar/interaction";
-import { creneauApi } from "../api/api";
+import { useState, useEffect, useCallback } from "react";
+import { creneauApi, professeurApi } from "../api/api";
+import { PageHeader, Tabs, Alert, LoadingSkeleton, EmptyState } from "./ui";
+import { Calendar, Users, List } from "lucide-react";
+import DisponibilitesProfs from "./DisponibilitesProfs";
 
-const SALLES = ["Salle A1", "Salle A2", "Salle B1", "Amphithéâtre"];
+const DUREES = [
+  { val: "20", label: "20 min" },
+  { val: "30", label: "30 min" },
+  { val: "45", label: "45 min" },
+  { val: "60", label: "60 min" },
+];
+
+const SALLES_CONFIG = ["Salle A1", "Salle A2", "Salle B1", "Amphithéâtre"];
 
 const inputStyle = {
-  padding: "8px 12px", borderRadius: 8,
-  border: "1px solid var(--border2)", background: "var(--surface2)",
+  padding: "9px 12px", borderRadius: 10,
+  border: "1px solid var(--border2)", background: "var(--surface)",
   color: "var(--text)", outline: "none", fontSize: 13, width: "100%",
+  boxSizing: "border-box", boxShadow: "var(--shadow-xs)",
+  transition: "border-color 0.15s, box-shadow 0.15s",
 };
 
-function creneauToEvent(creneau) {
-  const isOccupe = creneau.statut === "OCCUPE";
-  return {
-    id:              String(creneau.id),
-    title:           creneau.salle,
-    start:           `${creneau.date}T${creneau.heureDebut}`,
-    end:             `${creneau.date}T${creneau.heureFin}`,
-    backgroundColor: isOccupe ? "#fef3c7" : "#d1fae5",
-    borderColor:     isOccupe ? "#f59e0b" : "#10b981",
-    textColor:       isOccupe ? "#92400e" : "#065f46",
-    extendedProps:   { ...creneau },
-  };
-}
-
-function ModalDetail({ creneau, onClose }) {
-  if (!creneau) return null;
-  const isOccupe = creneau.statut === "OCCUPE";
+function FieldWrap({ label, children }) {
   return (
-    <div onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2000 }}>
-      <div style={{
-        background: "var(--surface)", borderRadius: 16,
-        border: `1px solid ${isOccupe ? "#f59e0b" : "#10b981"}`,
-        padding: "28px 32px", width: 380, boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <label style={{
+        fontSize: 11, fontWeight: 700, color: "var(--text-3)",
+        textTransform: "uppercase", letterSpacing: "0.06em",
       }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", marginBottom: 6 }}>{creneau.salle}</div>
-            <span style={{
-              fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20,
-              background: isOccupe ? "#fef3c7" : "#d1fae5",
-              color: isOccupe ? "#92400e" : "#065f46",
-              border: `1px solid ${isOccupe ? "#f59e0b" : "#10b981"}`,
-            }}>
-              {isOccupe ? "Occupé" : "Disponible"}
-            </span>
-          </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--muted)" }}>×</button>
-        </div>
-        {[
-          ["Date",   creneau.date],
-          ["Début",  creneau.heureDebut],
-          ["Fin",    creneau.heureFin],
-          ["Durée",  `${creneau.dureeMinutes} min`],
-        ].map(([label, val]) => (
-          <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid var(--border)" }}>
-            <span style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</span>
-            <span style={{ fontSize: 13, fontWeight: 500, color: "var(--text)", fontFamily: "'DM Mono', monospace" }}>{val}</span>
-          </div>
-        ))}
-      </div>
+        {label}
+      </label>
+      {children}
     </div>
   );
 }
 
-function FormulaireCreneaux({ onCreated, selectedDate }) {
-  const [form, setForm]       = useState({ date: "", heureDebut: "", dureeMinutes: "30", salle: "Salle A1" });
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError]     = useState(null);
+function StepIndicator({ step }) {
+  const steps = [
+    { n: 1, label: "Date & heure" },
+    { n: 2, label: "Choisir salle" },
+    { n: 3, label: "Jury & confirmer" },
+  ];
+  return (
+    <div style={{ display: "flex", alignItems: "center", marginBottom: 28 }}>
+      {steps.map((s, i) => {
+        const done   = step > s.n;
+        const active = step === s.n;
+        return (
+          <div key={s.n} style={{ display: "flex", alignItems: "center", flex: i < 2 ? 1 : "none" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: "50%",
+                background: done ? "var(--green)" : active ? "var(--blue-600)" : "var(--surface2)",
+                border: `2px solid ${done ? "var(--green)" : active ? "var(--blue-600)" : "var(--border2)"}`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 13, fontWeight: 700,
+                color: done || active ? "#fff" : "var(--text-4)",
+                transition: "all 0.2s",
+                boxShadow: active ? "var(--shadow-blue)" : "none",
+              }}>
+                {done ? "✓" : s.n}
+              </div>
+              <div style={{
+                fontSize: 11, fontWeight: active ? 700 : 400,
+                color: active ? "var(--blue-600)" : done ? "var(--green-text)" : "var(--text-4)",
+                whiteSpace: "nowrap",
+              }}>
+                {s.label}
+              </div>
+            </div>
+            {i < 2 && (
+              <div style={{
+                flex: 1, height: 2,
+                background: done ? "var(--green)" : "var(--border2)",
+                margin: "0 10px 20px 10px",
+                transition: "background 0.3s",
+              }} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
-  useEffect(() => {
-    if (selectedDate) setForm(p => ({ ...p, date: selectedDate }));
-  }, [selectedDate]);
+function CreateurCreneau({ onCreated }) {
+  const [step, setStep]                 = useState(1);
+  const [date, setDate]                 = useState("");
+  const [heureDebut, setHeureDebut]     = useState("");
+  const [duree, setDuree]               = useState("30");
+  const [sallesLibres, setSallesLibres] = useState([]);
+  const [salleChoisie, setSalleChoisie] = useState(null);
+  const [profsDispos, setProfsDispos]   = useState([]);
+  const [juryIds, setJuryIds]           = useState([]);
+  const [loading, setLoading]           = useState(false);
+  const [creating, setCreating]         = useState(false);
+  const [error, setError]               = useState(null);
+  const [success, setSuccess]           = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!form.date || !form.heureDebut) { setError("Date et heure obligatoires."); return; }
+  const heureFin = heureDebut
+    ? (() => {
+        const [h, m] = heureDebut.split(":").map(Number);
+        const total  = h * 60 + m + parseInt(duree);
+        return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+      })()
+    : "";
+
+  const handleCheckSalles = async () => {
+    if (!date || !heureDebut) { setError("Date et heure obligatoires."); return; }
     setLoading(true); setError(null);
     try {
-      await creneauApi.creer({ date: form.date, heureDebut: form.heureDebut + ":00", dureeMinutes: parseInt(form.dureeMinutes), salle: form.salle });
-      setForm(p => ({ ...p, heureDebut: "" }));
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 2000);
-      onCreated();
+      const libres = await creneauApi.sallesLibres(date, heureDebut, parseInt(duree));
+      setSallesLibres(libres);
+      setSalleChoisie(null);
+      setProfsDispos([]);
+      setJuryIds([]);
+      setStep(2);
     } catch (e) { setError(e.message); }
     finally { setLoading(false); }
   };
 
+  const handleChoixSalle = async (salle) => {
+    setSalleChoisie(salle);
+    setLoading(true);
+    try {
+      const profs = await creneauApi.profsDispos(date, heureDebut, heureFin);
+      setProfsDispos(profs);
+      setJuryIds(profs.filter(p => p.disponible).map(p => String(p.id)));
+      setStep(3);
+    } catch (e) { setError(e.message); }
+    finally { setLoading(false); }
+  };
+
+  const toggleProf = (prof) => {
+    if (!prof.disponible) return;
+    const sid = String(prof.id);
+    setJuryIds(p => p.includes(sid) ? p.filter(x => x !== sid) : [...p, sid]);
+  };
+
+  const handleCreer = async () => {
+    if (juryIds.length === 0) { setError("Sélectionnez au moins un professeur pour le jury."); return; }
+    setCreating(true); setError(null);
+    try {
+      await creneauApi.creer({
+        date,
+        heureDebut: heureDebut + ":00",
+        dureeMinutes: parseInt(duree),
+        salle: salleChoisie,
+        juryIds: juryIds.map(Number),
+      });
+      setSuccess(true);
+      setTimeout(() => {
+        setSuccess(false);
+        setStep(1);
+        setDate(""); setHeureDebut(""); setDuree("30");
+        setSallesLibres([]); setSalleChoisie(null);
+        setProfsDispos([]); setJuryIds([]);
+        onCreated();
+      }, 1800);
+    } catch (e) { setError(e.message); }
+    finally { setCreating(false); }
+  };
+
+  const reset = () => {
+    setStep(1); setDate(""); setHeureDebut(""); setDuree("30");
+    setSallesLibres([]); setSalleChoisie(null);
+    setProfsDispos([]); setJuryIds([]);
+    setError(null);
+  };
+
+  const profsSelectionnes = profsDispos.filter(p => juryIds.includes(String(p.id)));
+
   return (
-    <div style={{ background: "var(--surface)", border: "1px solid var(--border2)", borderRadius: 14, padding: "20px", position: "sticky", top: 24 }}>
-      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>Nouveau créneau</div>
-      <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 16 }}>Cliquez sur une date dans le calendrier pour la sélectionner</div>
+    <div style={{
+      background: "var(--surface)", borderRadius: "var(--r-xl)",
+      border: "1px solid var(--border2)", padding: "28px 32px",
+      boxShadow: "var(--shadow-sm)",
+    }}>
+      <StepIndicator step={step} />
 
-      {error   && <div style={{ background: "#fee2e2", border: "1px solid #ef4444", color: "#991b1b", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 10 }}>{error}</div>}
-      {success && <div style={{ background: "#d1fae5", border: "1px solid #10b981", color: "#065f46", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 10, fontWeight: 500 }}>Créneau créé.</div>}
+      {error && (
+        <div style={{
+          background: "var(--red-bg)", border: "1px solid var(--red)",
+          color: "var(--red-text)", borderRadius: "var(--r-md)",
+          padding: "10px 14px", fontSize: 13, fontWeight: 500, marginBottom: 20,
+        }}>
+          {error}
+        </div>
+      )}
 
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {[
-          { label: "Date",          node: <input type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} style={inputStyle} /> },
-          { label: "Heure de début",node: <input type="time" value={form.heureDebut} onChange={e => setForm(p => ({ ...p, heureDebut: e.target.value }))} style={inputStyle} /> },
-          { label: "Durée",         node: (
-            <select value={form.dureeMinutes} onChange={e => setForm(p => ({ ...p, dureeMinutes: e.target.value }))} style={inputStyle}>
-              <option value="20">20 min</option><option value="30">30 min</option>
-              <option value="45">45 min</option><option value="60">60 min</option>
+      {success && (
+        <div style={{
+          background: "var(--green-bg)", border: "1px solid var(--green)",
+          color: "var(--green-text)", borderRadius: "var(--r-md)",
+          padding: "12px 16px", fontSize: 14, fontWeight: 700,
+          marginBottom: 20, textAlign: "center",
+        }}>
+          Créneau créé avec succès ✓
+        </div>
+      )}
+
+      {/* ── STEP 1: Date & heure ── */}
+      {step === 1 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <FieldWrap label="Date de la soutenance">
+            <input type="date" value={date}
+              onChange={e => setDate(e.target.value)}
+              style={inputStyle}
+              onFocus={e => { e.target.style.borderColor = "var(--blue-500)"; e.target.style.boxShadow = "0 0 0 3px rgba(59,130,246,0.12)"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border2)"; e.target.style.boxShadow = "var(--shadow-xs)"; }}
+            />
+          </FieldWrap>
+          <FieldWrap label="Heure de début">
+            <input type="time" value={heureDebut}
+              onChange={e => setHeureDebut(e.target.value)}
+              style={inputStyle}
+              onFocus={e => { e.target.style.borderColor = "var(--blue-500)"; e.target.style.boxShadow = "0 0 0 3px rgba(59,130,246,0.12)"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border2)"; e.target.style.boxShadow = "var(--shadow-xs)"; }}
+            />
+          </FieldWrap>
+          <FieldWrap label="Durée">
+            <select value={duree} onChange={e => setDuree(e.target.value)} style={inputStyle}>
+              {DUREES.map(d => <option key={d.val} value={d.val}>{d.label}</option>)}
             </select>
-          )},
-          { label: "Salle",         node: (
-            <select value={form.salle} onChange={e => setForm(p => ({ ...p, salle: e.target.value }))} style={inputStyle}>
-              {SALLES.map(s => <option key={s}>{s}</option>)}
-            </select>
-          )},
-        ].map(({ label, node }) => (
-          <div key={label} style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-            <label style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</label>
-            {node}
-          </div>
-        ))}
-        <button type="submit" disabled={loading} style={{ marginTop: 4, padding: "10px", borderRadius: 8, border: "none", background: "#3b82f6", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: loading ? 0.6 : 1 }}>
-          {loading ? "Création..." : "Créer le créneau"}
-        </button>
-      </form>
+          </FieldWrap>
 
-      <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
-        <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 10 }}>Légende</div>
-        {[
-          { bg: "#d1fae5", border: "#10b981", label: "Disponible" },
-          { bg: "#fef3c7", border: "#f59e0b", label: "Occupé" },
-        ].map(l => (
-          <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-            <div style={{ width: 28, height: 14, borderRadius: 4, background: l.bg, border: `1px solid ${l.border}` }} />
-            <span style={{ fontSize: 12, color: "var(--muted)" }}>{l.label}</span>
+          {heureDebut && (
+            <div style={{
+              background: "var(--blue-50)", border: "1px solid var(--blue-200)",
+              borderRadius: "var(--r-md)", padding: "10px 14px",
+              fontSize: 13, color: "var(--blue-700)", fontFamily: "'JetBrains Mono', monospace",
+              fontWeight: 600,
+            }}>
+              Créneau : {heureDebut} → {heureFin}
+            </div>
+          )}
+
+          <button onClick={handleCheckSalles}
+            disabled={loading || !date || !heureDebut}
+            style={{
+              padding: "12px", borderRadius: "var(--r-md)", border: "none",
+              background: !date || !heureDebut ? "var(--surface3)" : "var(--blue-600)",
+              color: !date || !heureDebut ? "var(--text-4)" : "#fff",
+              fontSize: 14, fontWeight: 700, cursor: !date || !heureDebut ? "not-allowed" : "pointer",
+              boxShadow: !date || !heureDebut ? "none" : "var(--shadow-blue)",
+              transition: "all 0.15s",
+            }}>
+            {loading ? "Vérification..." : "Voir les salles disponibles →"}
+          </button>
+        </div>
+      )}
+
+      {/* ── STEP 2: Choisir salle ── */}
+      {step === 2 && (
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
+            {date} · {heureDebut} → {heureFin}
           </div>
-        ))}
-      </div>
+          <div style={{ fontSize: 12, color: "var(--text-3)", marginBottom: 20 }}>
+            Vert = libre · Ambre = créneau existant (sélectionnable quand même)
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+            {SALLES_CONFIG.map(salle => {
+              const libre = sallesLibres.includes(salle);
+              return (
+                <div key={salle}
+                  onClick={() => !loading && handleChoixSalle(salle)}
+                  style={{
+                    padding: "16px 20px", borderRadius: "var(--r-lg)", cursor: "pointer",
+                    border: `1.5px solid ${libre ? "var(--green)" : "var(--amber)"}`,
+                    background: libre ? "var(--green-bg)" : "var(--amber-bg)",
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    opacity: loading ? 0.6 : 1,
+                    transition: "transform 0.1s, box-shadow 0.1s",
+                  }}
+                  onMouseEnter={e => { if (!loading) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "var(--shadow-md)"; } }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}
+                >
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: libre ? "var(--green-text)" : "var(--amber-text)" }}>
+                      {salle}
+                    </div>
+                    <div style={{ fontSize: 11, color: libre ? "var(--green)" : "var(--amber)", marginTop: 2, fontWeight: 500 }}>
+                      {libre ? "Disponible sur ce créneau" : "Créneau existant — sélectionner quand même ?"}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 20, color: libre ? "var(--green)" : "var(--amber)" }}>→</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <button onClick={reset}
+            style={{
+              width: "100%", padding: "10px", borderRadius: "var(--r-md)",
+              border: "1px solid var(--border2)", background: "transparent",
+              color: "var(--text-3)", fontSize: 13, cursor: "pointer", fontWeight: 500,
+            }}>
+            ← Modifier la date / heure
+          </button>
+        </div>
+      )}
+
+      {/* ── STEP 3: Jury & confirmer ── */}
+      {step === 3 && (
+        <div>
+          {/* Recap */}
+          <div style={{
+            background: "var(--blue-50)", border: "1px solid var(--blue-200)",
+            borderRadius: "var(--r-lg)", padding: "16px 20px", marginBottom: 24,
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--blue-700)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>
+              Créneau à créer
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--blue-700)" }}>{salleChoisie}</div>
+            <div style={{ fontSize: 13, color: "var(--blue-600)", marginTop: 3, fontFamily: "'JetBrains Mono', monospace" }}>
+              {date} · {heureDebut} — {heureFin} · {duree} min
+            </div>
+          </div>
+
+          {/* Prof selection */}
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", marginBottom: 4 }}>
+              Sélectionner le jury
+            </div>
+            <div style={{ fontSize: 11, color: "var(--text-3)", marginBottom: 14 }}>
+              Les profs indisponibles ne peuvent pas être sélectionnés.
+              {juryIds.length > 0 && (
+                <span style={{ color: "var(--blue-600)", fontWeight: 700, marginLeft: 8 }}>
+                  {juryIds.length} sélectionné{juryIds.length > 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
+
+            {loading ? (
+              <div style={{ fontSize: 13, color: "var(--text-4)" }}>Chargement...</div>
+            ) : profsDispos.length === 0 ? (
+              <div style={{
+                fontSize: 13, color: "var(--text-4)", padding: "14px",
+                background: "var(--surface2)", borderRadius: "var(--r-md)",
+              }}>
+                Aucune donnée de disponibilité pour ce jour.
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {profsDispos.map(p => {
+                  const isSelected = juryIds.includes(String(p.id));
+                  const isIndispo  = !p.disponible;
+                  return (
+                    <div key={p.id}
+                      onClick={() => toggleProf(p)}
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                        padding: "12px 16px", borderRadius: "var(--r-md)",
+                        cursor: isIndispo ? "not-allowed" : "pointer",
+                        border: `1.5px solid ${isIndispo ? "var(--red-bg)" : isSelected ? "var(--blue-500)" : "var(--green)"}`,
+                        background: isIndispo ? "var(--red-bg)" : isSelected ? "var(--blue-50)" : "var(--green-bg)",
+                        opacity: isIndispo ? 0.6 : 1,
+                        transition: "all 0.15s",
+                      }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: isSelected ? 700 : 500, color: isIndispo ? "var(--red-text)" : isSelected ? "var(--blue-700)" : "var(--green-text)" }}>
+                          {p.nom}
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--text-4)", marginTop: 1 }}>{p.departement}</div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
+                          background: isIndispo ? "var(--red)" : "var(--green)", color: "#fff",
+                        }}>
+                          {isIndispo ? "Indisponible" : "Disponible"}
+                        </span>
+                        {!isIndispo && (
+                          <div style={{
+                            width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+                            border: `2px solid ${isSelected ? "var(--blue-600)" : "var(--border2)"}`,
+                            background: isSelected ? "var(--blue-600)" : "transparent",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                          }}>
+                            {isSelected && <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>✓</span>}
+                          </div>
+                        )}
+                        {isIndispo && (
+                          <div style={{
+                            width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+                            background: "var(--red)", display: "flex", alignItems: "center", justifyContent: "center",
+                          }}>
+                            <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>✕</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Jury recap */}
+          {juryIds.length > 0 && (
+            <div style={{
+              background: "var(--blue-50)", border: "1px solid var(--blue-200)",
+              borderRadius: "var(--r-md)", padding: "10px 16px", marginBottom: 20,
+            }}>
+              <div style={{ fontSize: 11, color: "var(--blue-700)", fontWeight: 700, marginBottom: 4 }}>
+                Jury sélectionné :
+              </div>
+              <div style={{ fontSize: 13, color: "var(--blue-700)" }}>
+                {profsSelectionnes.map(p => p.nom).join(" · ")}
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={handleCreer}
+              disabled={creating || juryIds.length === 0}
+              style={{
+                flex: 1, padding: "12px", borderRadius: "var(--r-md)", border: "none",
+                background: juryIds.length === 0 ? "var(--surface3)" : "var(--green)",
+                color: juryIds.length === 0 ? "var(--text-4)" : "#fff",
+                fontSize: 14, fontWeight: 700,
+                cursor: juryIds.length === 0 ? "not-allowed" : "pointer",
+                opacity: creating ? 0.6 : 1,
+                transition: "all 0.15s",
+              }}>
+              {creating ? "Création..." : juryIds.length === 0 ? "Sélectionnez au moins 1 prof" : "✓ Créer ce créneau"}
+            </button>
+            <button onClick={() => setStep(2)}
+              style={{
+                padding: "12px 20px", borderRadius: "var(--r-md)",
+                border: "1px solid var(--border2)", background: "transparent",
+                color: "var(--text-3)", fontSize: 13, cursor: "pointer",
+              }}>
+              Retour
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 export default function CalendrierCreneaux() {
-  const [creneaux, setCreneaux]               = useState([]);
-  const [loading, setLoading]                 = useState(true);
-  const [selectedCreneau, setSelectedCreneau] = useState(null);
-  const [selectedDate, setSelectedDate]       = useState("");
-  const [filterSalle, setFilterSalle]         = useState("TOUT");
+  const [creneaux, setCreneaux]         = useState([]);
+  const [loadingC, setLoadingC]         = useState(true);
+  const [activeTab, setActiveTab]       = useState("creer");
+  const [filterSalle, setFilterSalle]   = useState("TOUT");
+  const [filterStatut, setFilterStatut] = useState("TOUT");
 
   const loadCreneaux = useCallback(async () => {
-    setLoading(true);
+    setLoadingC(true);
     try { setCreneaux(await creneauApi.getAll()); }
     catch (e) { console.error(e); }
-    finally { setLoading(false); }
+    finally { setLoadingC(false); }
   }, []);
 
   useEffect(() => { loadCreneaux(); }, [loadCreneaux]);
 
-  const events = creneaux
-    .filter(c => filterSalle === "TOUT" || c.salle === filterSalle)
-    .map(creneauToEvent);
+  const creneauxValides  = creneaux.filter(c => c.jury?.length > 0 && c.salle);
+  const filteredCreneaux = creneauxValides.filter(c => {
+    const salleOk  = filterSalle  === "TOUT" || c.salle  === filterSalle;
+    const statutOk = filterStatut === "TOUT" || c.statut === filterStatut;
+    return salleOk && statutOk;
+  });
 
-  const countDispo  = creneaux.filter(c => c.statut === "DISPONIBLE").length;
-  const countOccupe = creneaux.filter(c => c.statut === "OCCUPE").length;
+  const countDispo  = creneauxValides.filter(c => c.statut === "DISPONIBLE").length;
+  const countOccupe = creneauxValides.filter(c => c.statut === "OCCUPE").length;
+
+  const TABS = [
+    { id: "creer",  label: "Créer un créneau",        icon: Calendar                             },
+    { id: "dispos", label: "Disponibilités des profs", icon: Users                                },
+    { id: "liste",  label: "Tous les créneaux",        icon: List, count: creneauxValides.length  },
+  ];
 
   return (
-    <div style={{ animation: "fadeIn 0.3s ease" }}>
+    <div style={{ animation: "fadeUp 0.4s cubic-bezier(0.16,1,0.3,1)" }}>
       <style>{`
-        @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-        .fc { font-family: 'DM Sans', sans-serif !important; }
-        .fc-toolbar-title { font-size:16px !important; font-weight:600 !important; color:var(--text) !important; }
-        .fc-button { background:var(--surface2) !important; border:1px solid var(--border2) !important; color:var(--text) !important; font-size:12px !important; font-weight:500 !important; border-radius:8px !important; padding:6px 12px !important; box-shadow:none !important; }
-        .fc-button:hover { background:var(--border) !important; }
-        .fc-button-primary:not(:disabled).fc-button-active { background:#3b82f6 !important; border-color:#3b82f6 !important; color:#fff !important; }
-        .fc-col-header-cell { background:var(--surface2) !important; }
-        .fc-col-header-cell-cushion { color:var(--muted) !important; font-size:12px !important; font-weight:500 !important; text-decoration:none !important; }
-        .fc-timegrid-slot-label { color:var(--muted) !important; font-size:11px !important; font-family:'DM Mono',monospace !important; }
-        .fc-daygrid-day-number { color:var(--muted) !important; font-size:12px !important; text-decoration:none !important; }
-        .fc-event { border-radius:6px !important; border-width:1.5px !important; font-size:11px !important; font-weight:600 !important; cursor:pointer !important; transition: opacity 0.15s, transform 0.1s !important; }
-        .fc-event:hover { opacity:0.85 !important; }
-        .fc-scrollgrid, .fc-scrollgrid-section > td, .fc-timegrid-slot { border-color:var(--border) !important; }
-        .fc-daygrid-day { background:var(--surface) !important; }
-        .fc-day-today { background:rgba(59,130,246,0.04) !important; }
-        .fc-highlight { background:rgba(59,130,246,0.08) !important; }
-        .fc-toolbar { margin-bottom:16px !important; flex-wrap:wrap; gap:8px; }
         input[type="date"]::-webkit-calendar-picker-indicator,
-        input[type="time"]::-webkit-calendar-picker-indicator { cursor:pointer; opacity:0.6; }
+        input[type="time"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.6; }
       `}</style>
 
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Phase 2</div>
-        <h1 style={{ fontSize: 24, fontWeight: 600, color: "var(--text)", letterSpacing: "-0.4px" }}>Calendrier des créneaux</h1>
-      </div>
+      <PageHeader phase={2} title="Disponibilités & Créneaux"
+        subtitle="Créez des créneaux et vérifiez la disponibilité des professeurs" />
 
-      {/* Stats + filtre */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 24, alignItems: "center", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
         {[
-          { label: "Total",       val: creneaux.length, bg: "#dbeafe", border: "#3b82f6", color: "#1e40af" },
-          { label: "Disponibles", val: countDispo,       bg: "#d1fae5", border: "#10b981", color: "#065f46" },
-          { label: "Occupés",     val: countOccupe,      bg: "#fef3c7", border: "#f59e0b", color: "#92400e" },
+          { label: "Créneaux valides", value: creneauxValides.length, color: "#2563eb", bg: "#dbeafe" },
+          { label: "Disponibles",      value: countDispo,             color: "#10b981", bg: "#d1fae5" },
+          { label: "Occupés",          value: countOccupe,            color: "#f59e0b", bg: "#fef3c7" },
         ].map(s => (
-          <div key={s.label} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 10, padding: "10px 18px", display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 22, fontWeight: 700, color: s.color, letterSpacing: "-0.5px" }}>{s.val}</span>
-            <span style={{ fontSize: 11, color: s.color, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>{s.label}</span>
+          <div key={s.label} style={{
+            background: s.bg, borderRadius: 12, padding: "14px 20px",
+            display: "flex", alignItems: "center", gap: 10, flex: 1,
+          }}>
+            <span style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: s.color, textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</span>
           </div>
         ))}
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-          <label style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Salle</label>
-          <select value={filterSalle} onChange={e => setFilterSalle(e.target.value)} style={{ ...inputStyle, width: "auto", padding: "7px 12px" }}>
-            <option value="TOUT">Toutes</option>
-            {SALLES.map(s => <option key={s}>{s}</option>)}
-          </select>
-        </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 270px", gap: 24, alignItems: "start" }}>
-        <div style={{ background: "var(--surface)", border: "1px solid var(--border2)", borderRadius: 14, padding: "20px" }}>
-          {loading ? (
-            <div style={{ height: 500, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)" }}>Chargement...</div>
+      <Tabs tabs={TABS} active={activeTab} onChange={setActiveTab} />
+
+      {activeTab === "creer"  && <CreateurCreneau onCreated={loadCreneaux} />}
+      {activeTab === "dispos" && <DisponibilitesProfs />}
+
+      {activeTab === "liste" && (
+        <div>
+          <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap", alignItems: "center" }}>
+            <select value={filterSalle} onChange={e => setFilterSalle(e.target.value)}
+              style={{ ...inputStyle, width: "auto", padding: "7px 12px" }}>
+              <option value="TOUT">Toutes les salles</option>
+              {SALLES_CONFIG.map(s => <option key={s}>{s}</option>)}
+            </select>
+            <select value={filterStatut} onChange={e => setFilterStatut(e.target.value)}
+              style={{ ...inputStyle, width: "auto", padding: "7px 12px" }}>
+              <option value="TOUT">Tous les statuts</option>
+              <option value="DISPONIBLE">Disponible</option>
+              <option value="OCCUPE">Occupé</option>
+            </select>
+            <div style={{ fontSize: 12, color: "var(--text-3)", fontWeight: 500 }}>
+              {filteredCreneaux.length} créneau{filteredCreneaux.length !== 1 ? "x" : ""}
+            </div>
+          </div>
+
+          {loadingC ? (
+            <LoadingSkeleton rows={3} height={72} />
+          ) : filteredCreneaux.length === 0 ? (
+            <EmptyState icon={List} title="Aucun créneau" description="Aucun créneau valide trouvé." />
           ) : (
-            <FullCalendar
-              plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-              initialView="timeGridWeek"
-              headerToolbar={{ left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek,timeGridDay" }}
-              buttonText={{ today: "Aujourd'hui", month: "Mois", week: "Semaine", day: "Jour" }}
-              locale="fr"
-              firstDay={1}
-              slotMinTime="07:00:00"
-              slotMaxTime="19:00:00"
-              slotDuration="00:30:00"
-              allDaySlot={false}
-              height={560}
-              events={events}
-              selectable={true}
-              dateClick={(info) => setSelectedDate(info.dateStr.split("T")[0])}
-              eventClick={(info) => setSelectedCreneau(info.event.extendedProps)}
-              eventContent={(arg) => (
-                <div style={{ padding: "2px 6px", overflow: "hidden" }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{arg.event.title}</div>
-                  <div style={{ fontSize: 10, opacity: 0.8 }}>{arg.timeText}</div>
-                </div>
-              )}
-            />
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {filteredCreneaux.map(c => {
+                const isOccupe = c.statut === "OCCUPE";
+                const juryNoms = c.jury?.map(j => j.nom).join(" · ") || "—";
+                return (
+                  <div key={c.id} style={{
+                    background: "var(--surface)",
+                    border: `1px solid ${isOccupe ? "var(--amber)" : "var(--green)"}`,
+                    borderLeft: `4px solid ${isOccupe ? "var(--amber)" : "var(--green)"}`,
+                    borderRadius: "var(--r-lg)", padding: "14px 20px",
+                    display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16,
+                    boxShadow: "var(--shadow-xs)",
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 3 }}>
+                        {c.salle}
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--text-3)", fontFamily: "'JetBrains Mono', monospace", marginBottom: 4 }}>
+                        {c.date} · {c.heureDebut} — {c.heureFin} · {c.dureeMinutes} min
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--blue-600)", fontWeight: 600 }}>
+                        Jury : {juryNoms}
+                      </div>
+                    </div>
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 20,
+                      background: isOccupe ? "var(--amber-bg)" : "var(--green-bg)",
+                      color: isOccupe ? "var(--amber-text)" : "var(--green-text)",
+                      border: `1px solid ${isOccupe ? "var(--amber)" : "var(--green)"}`,
+                      whiteSpace: "nowrap",
+                    }}>
+                      {isOccupe ? "Occupé" : "Disponible"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
-        <FormulaireCreneaux onCreated={loadCreneaux} selectedDate={selectedDate} />
-      </div>
-
-      {selectedCreneau && <ModalDetail creneau={selectedCreneau} onClose={() => setSelectedCreneau(null)} />}
+      )}
     </div>
   );
 }
