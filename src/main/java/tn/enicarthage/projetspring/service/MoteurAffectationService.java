@@ -5,6 +5,7 @@ import tn.enicarthage.projetspring.entity.Affectation;
 import tn.enicarthage.projetspring.entity.Binome;
 import tn.enicarthage.projetspring.entity.ChoixSujet;
 import tn.enicarthage.projetspring.entity.Sujet;
+import tn.enicarthage.projetspring.entity.StatutSujet;
 import tn.enicarthage.projetspring.repository.AffectationRepository;
 import tn.enicarthage.projetspring.repository.BinomeRepository;
 import tn.enicarthage.projetspring.repository.SujetRepository;
@@ -35,20 +36,34 @@ public class MoteurAffectationService {
      */
     @Transactional
     public List<Affectation> affecterSujets() {
-        // Remettre à zéro les affectations existantes
-        affectationRepository.deleteAll();
+        // Delete only non-locked affectations (EN_ATTENTE + REFUSEE).
+        // Keep VALIDEE (verrouillee=true) — those may be linked to Soutenances.
+        List<Affectation> nonVerrouillee = affectationRepository.findByVerrouilleeFalse();
+        affectationRepository.deleteAll(nonVerrouillee);
+        affectationRepository.flush();
 
-        // Remettre tous les sujets comme disponibles avant relancement
-        List<Sujet> tousLesSujets = sujetRepository.findByConfirmeTrue();
-        tousLesSujets.forEach(s -> s.setDisponible(true));
-        sujetRepository.saveAll(tousLesSujets);
+        // Collect binome/sujet IDs already locked by a validated affectation — skip them
+        List<Affectation> validees = affectationRepository.findByVerrouilleeTrue();
+        List<Long> dejaAffectesBinomeIds = validees.stream()
+                .map(a -> a.getBinome().getId()).toList();
+        List<Long> sujetsDejaPris = validees.stream()
+                .map(a -> a.getSujet().getId()).toList();
+
+        List<Sujet> sujetsApprouves = sujetRepository.findByStatut(StatutSujet.APPROUVE);
+        sujetsApprouves.forEach(s -> s.setDisponible(!sujetsDejaPris.contains(s.getId())));
+        sujetRepository.saveAll(sujetsApprouves);
 
         List<Binome> binomes = binomeRepository.findAllByOrderByMoyenneBinomeDesc();
         List<Affectation> resultats = new ArrayList<>();
 
         for (Binome binome : binomes) {
-            List<ChoixSujet> choix = binome.getChoix();
+            // Skip binomes already locked (validated affectation exists)
+            if (dejaAffectesBinomeIds.contains(binome.getId())) {
+                log.info("⏭ Binôme {} déjà affecté (validé) — ignoré.", binome.getId());
+                continue;
+            }
 
+            List<ChoixSujet> choix = binome.getChoix();
             if (choix == null || choix.isEmpty()) {
                 log.warn("Binôme {} sans choix — ignoré.", binome.getId());
                 continue;
@@ -70,7 +85,6 @@ public class MoteurAffectationService {
                     affectationRepository.save(affectation);
                     resultats.add(affectation);
 
-                    // Marquer le sujet comme pris
                     sujet.setDisponible(false);
                     sujetRepository.save(sujet);
 
