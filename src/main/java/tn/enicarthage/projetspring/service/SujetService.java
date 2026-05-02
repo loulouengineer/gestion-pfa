@@ -105,6 +105,10 @@ public class SujetService {
                 .orElseThrow(() -> new RuntimeException("Sujet non trouvé"));
 
         sujet.setStatut(StatutSujet.valueOf(statut));
+        if (StatutSujet.APPROUVE.name().equals(statut)) {
+            sujet.setConfirme(true);
+            sujet.setDisponible(true);
+        }
         return sujetRepository.save(sujet);
     }
 }
