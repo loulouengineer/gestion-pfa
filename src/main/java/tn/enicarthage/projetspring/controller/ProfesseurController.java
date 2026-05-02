@@ -26,6 +26,13 @@ public class ProfesseurController {
         return ResponseEntity.ok(professeurRepository.findAll());
     }
 
+    @GetMapping("/by-email")
+    public ResponseEntity<?> getByEmail(@RequestParam String email) {
+        return professeurRepository.findByEmail(email)
+                .map(p -> ResponseEntity.ok((Object) Map.of("id", p.getId(), "nom", p.getNom(), "departement", p.getDepartement())))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @GetMapping("/search")
     public ResponseEntity<List<Professeur>> search(@RequestParam String nom) {
         return ResponseEntity.ok(professeurRepository.findByNomContaining(nom));

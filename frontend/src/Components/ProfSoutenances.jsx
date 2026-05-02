@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { soutenanceApi } from "../api/api";
-import { Card, StatBar, PageHeader, LoadingSkeleton, EmptyState, Alert, Button, Badge } from "./ui";
+import { Card, PageHeader, LoadingSkeleton, EmptyState, Alert, Button, Badge } from "./ui";
 import { Calendar, Clock, MapPin, Users, Star, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
 
 function SoutenanceCard({ soutenance, onResultat }) {
@@ -209,11 +209,21 @@ export default function ProfSoutenances({ prof }) {
     <div style={{ animation: "fadeUp 0.4s cubic-bezier(0.16,1,0.3,1)" }}>
       <PageHeader phase="📋" title="Mes soutenances" subtitle="Soutenances pour lesquelles vous êtes membre du jury" />
 
-      <StatBar stats={[
-        { label: "Total",     value: soutenances.length,             color: "var(--blue-600)" },
-        { label: "À venir",   value: count("PLANIFIEE"), total: soutenances.length, color: "var(--amber)"    },
-        { label: "Terminées", value: count("TERMINEE"),  total: soutenances.length, color: "var(--green)"    },
-      ]} />
+      <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+        {[
+          { label: "Total",     value: soutenances.length, color: "#2563eb", bg: "#dbeafe" },
+          { label: "À venir",   value: count("PLANIFIEE"), color: "#f59e0b", bg: "#fef3c7" },
+          { label: "Terminées", value: count("TERMINEE"),  color: "#10b981", bg: "#d1fae5" },
+        ].map(s => (
+          <div key={s.label} style={{
+            background: s.bg, borderRadius: 12, padding: "14px 20px",
+            display: "flex", alignItems: "center", gap: 10, flex: 1,
+          }}>
+            <span style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: s.color, textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</span>
+          </div>
+        ))}
+      </div>
 
       {error && <Alert type="error" message={error} onClose={() => setError(null)} />}
       {loading && <LoadingSkeleton rows={3} height={90} />}

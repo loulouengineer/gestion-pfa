@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { sujetApi } from "../api/api";
-import { PageHeader, StatBar, Alert, LoadingSkeleton, EmptyState, Button, Badge } from "./ui";
+import { PageHeader, Alert, LoadingSkeleton, EmptyState, Button, Badge, Card } from "./ui";
 import { BookOpen, Plus, Star, Edit3, Trash2, X, Check } from "lucide-react";
 
 const DIFF_CONFIG = {
@@ -21,16 +21,10 @@ function SujetCard({ sujet, onEdit, onDelete, index }) {
   const diff   = DIFF_CONFIG[sujet.difficulte] || DIFF_CONFIG[3];
   const statut = STATUT_CONFIG[sujet.statut]   || STATUT_CONFIG.EN_ATTENTE;
   return (
-    <div style={{
-      background: "var(--surface)", borderRadius: "var(--r-xl)",
-      border: "1px solid var(--border2)", boxShadow: "var(--shadow-sm)",
-      overflow: "hidden",
+    <Card hover style={{
+      borderRadius: "var(--r-xl)", overflow: "hidden",
       animation: `fadeUp 0.35s cubic-bezier(0.16,1,0.3,1) ${index * 0.06}s both`,
-      transition: "box-shadow 0.2s, transform 0.2s",
-    }}
-      onMouseEnter={e => { e.currentTarget.style.boxShadow = "var(--shadow-md)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
-      onMouseLeave={e => { e.currentTarget.style.boxShadow = "var(--shadow-sm)"; e.currentTarget.style.transform = "none"; }}
-    >
+    }}>
       <div style={{ height: 4, background: diff.color }} />
 
       <div style={{ padding: "20px 22px" }}>
@@ -87,7 +81,7 @@ function SujetCard({ sujet, onEdit, onDelete, index }) {
           )}
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -334,12 +328,22 @@ export default function ProfSujets({ prof }) {
         }
       />
 
-      <StatBar stats={[
-        { label: "Total",       value: sujets.length,       color: "var(--blue-600)" },
-        { label: "Approuvés",   value: approuves.length,    total: sujets.length, color: "var(--green)" },
-        { label: "En attente",  value: enAttente.length,    total: sujets.length, color: "var(--amber)" },
-        { label: "Disponibles", value: sujets.filter(s => s.disponible).length, total: sujets.length, color: "var(--blue-400)" },
-      ]} />
+      <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+        {[
+          { label: "Total",       value: sujets.length,                           color: "#2563eb", bg: "#dbeafe" },
+          { label: "Approuvés",   value: approuves.length,                        color: "#10b981", bg: "#d1fae5" },
+          { label: "En attente",  value: enAttente.length,                        color: "#f59e0b", bg: "#fef3c7" },
+          { label: "Disponibles", value: sujets.filter(s => s.disponible).length, color: "#60a5fa", bg: "#dbeafe" },
+        ].map(s => (
+          <div key={s.label} style={{
+            background: s.bg, borderRadius: 12, padding: "14px 20px",
+            display: "flex", alignItems: "center", gap: 10, flex: 1,
+          }}>
+            <span style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: s.color, textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</span>
+          </div>
+        ))}
+      </div>
 
       {error   && <Alert type="error"   message={error}   onClose={() => setError(null)}   />}
       {success && <Alert type="success" message={success} onClose={() => setSuccess(null)} />}

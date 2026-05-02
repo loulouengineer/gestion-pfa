@@ -75,6 +75,7 @@ export default function ProfNotifications({ prof }) {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
+    if (!prof.id) { setLoading(false); return; }
     try {
       const data = await notificationApi.getAll(prof.id);
       setNotifs(data);

@@ -50,6 +50,7 @@ public class DisponibiliteController {
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> ajouter(@RequestBody Map<String, Object> body) {
+        System.out.println("[DISPO] POST body: " + body);
         Long profId = Long.valueOf(body.get("professeurId").toString());
         Professeur prof = professeurRepository.findById(profId)
                 .orElseThrow(() -> new IllegalArgumentException("Professeur introuvable."));

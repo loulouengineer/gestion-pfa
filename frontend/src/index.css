@@ -38,6 +38,7 @@
   --violet-bg:   #ede9fe;
   --violet-text: #4c1d95;
 
+  --shadow-xs:  0 1px 2px rgba(15,23,42,0.05);
   --shadow-sm:  0 1px 3px rgba(15,23,42,0.08);
   --shadow-md:  0 4px 12px rgba(15,23,42,0.08);
   --shadow-lg:  0 8px 24px rgba(15,23,42,0.10);
