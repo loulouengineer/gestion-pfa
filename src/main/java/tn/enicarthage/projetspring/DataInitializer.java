@@ -54,6 +54,54 @@ public class DataInitializer {
             PasswordEncoder      passwordEncoder) {
 
         return args -> {
+            // ── FIX FOR CHAIMA (Binome ID 7) ──────────────────────────────────
+            userRepository.findByEmail("c.fessi@enicar.ucar.tn").ifPresent(user -> {
+                System.out.println("🔧 Fixing Chaima's binome (ID 7)...");
+                etudiantRepository.findById(user.getId()).ifPresent(e -> {
+                    binomeRepository.findAll().stream()
+                        .filter(b -> b.getEtudiant1().getId().equals(e.getId()) || b.getEtudiant2().getId().equals(e.getId()))
+                        .findFirst().ifPresent(b -> {
+                            System.out.println("   Found binome ID: " + b.getId());
+                            // 1. Ensure Affectation
+                            Affectation aff = affectationRepository.findAll().stream()
+                                .filter(a -> a.getBinome().getId().equals(b.getId()))
+                                .findFirst().orElseGet(() -> {
+                                    System.out.println("   Creating missing affectation...");
+                                    Affectation a = new Affectation();
+                                    a.setBinome(b);
+                                    a.setStatut(StatutAffectation.VALIDEE);
+                                    Sujet s = sujetRepository.findAll().stream().filter(Sujet::isDisponible).findFirst().orElse(null);
+                                    if (s != null) {
+                                        a.setSujet(s);
+                                        s.setDisponible(false);
+                                        sujetRepository.save(s);
+                                        return affectationRepository.save(a);
+                                    }
+                                    return null;
+                                });
+                            if (aff != null) {
+                                aff.setStatut(StatutAffectation.VALIDEE);
+                                affectationRepository.save(aff);
+                                // 2. Ensure Soutenance
+                                if (soutenanceRepository.findAll().stream().noneMatch(s -> s.getBinome().getId().equals(b.getId()))) {
+                                    System.out.println("   Scheduling missing soutenance...");
+                                    creneauRepository.findAll().stream()
+                                        .filter(c -> c.getStatut() == StatutCreneau.DISPONIBLE)
+                                        .findFirst().ifPresent(c -> {
+                                            Soutenance s = new Soutenance();
+                                            s.setBinome(b); s.setAffectation(aff); s.setCreneau(c);
+                                            s.setStatut(Soutenance.StatutSoutenance.PLANIFIEE);
+                                            c.setStatut(StatutCreneau.OCCUPE);
+                                            creneauRepository.save(c);
+                                            soutenanceRepository.save(s);
+                                            System.out.println("   ✅ Soutenance scheduled on " + c.getDate());
+                                        });
+                                }
+                            }
+                        });
+                });
+            });
+
             // Skip si les données de test spécifiques existent déjà
             if (etudiantRepository.existsByEmail("y.bensalah@etu.enicar.tn")) {
                 System.out.println("ℹ️  Données de test déjà présentes — initialisation ignorée.");
@@ -199,11 +247,11 @@ public class DataInitializer {
             //    Passés  : 28 et 29 avril 2026
             //    À venir : 20, 21, 22 mai 2026
             // ════════════════════════════════════════════════════════════════
-            Creneau c1 = creneau(LocalDate.of(2026, 4, 28), "08:30", 45, "Salle A1",
+            Creneau c1 = creneau(LocalDate.of(2026, 5, 10), "08:30", 45, "Salle A1",
                     StatutCreneau.OCCUPE,  List.of(p1, p3));
-            Creneau c2 = creneau(LocalDate.of(2026, 4, 28), "10:00", 45, "Salle B1",
+            Creneau c2 = creneau(LocalDate.of(2026, 5, 10), "10:00", 45, "Salle B1",
                     StatutCreneau.OCCUPE,  List.of(p2, p4));
-            Creneau c3 = creneau(LocalDate.of(2026, 4, 29), "09:00", 45, "Amphithéâtre",
+            Creneau c3 = creneau(LocalDate.of(2026, 5, 11), "09:00", 45, "Amphithéâtre",
                     StatutCreneau.OCCUPE,  List.of(p3, p5));
             Creneau c4 = creneau(LocalDate.of(2026, 5, 20), "08:30", 45, "Salle A1",
                     StatutCreneau.OCCUPE,  List.of(p1, p2));

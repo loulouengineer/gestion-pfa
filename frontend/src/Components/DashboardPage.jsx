@@ -11,6 +11,9 @@ export default function DashboardPage({ onNavigate }) {
     sujetStatusSub: "...",
     joursRestants: null,
     joursRestantsSub: "...",
+    dateSoutenance: null,
+    heureSoutenance: null,
+    salleSoutenance: null,
     progressPercentage: 0,
     currentStep: 1
   });
@@ -62,6 +65,40 @@ export default function DashboardPage({ onNavigate }) {
           <div style={styles.cardSub}>{data.joursRestantsSub}</div>
         </div>
       </div>
+
+      {/* SCHEDULED SOUTENANCE IF ANY */}
+      {data.dateSoutenance && (
+        <div style={{...styles.mainSection, borderLeft: '4px solid #4361ee'}}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h2 style={{...styles.sectionTitle, margin: 0}}>📅 Votre Soutenance est Planifiée !</h2>
+            <div style={{ background: '#eff6ff', color: '#4361ee', padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
+              {data.joursRestantsSub}
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 20 }}>
+            <div>
+              <div style={styles.cardTitle}>DATE</div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: '#1e293b' }}>{data.dateSoutenance}</div>
+            </div>
+            <div>
+              <div style={styles.cardTitle}>HEURE</div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: '#1e293b' }}>{data.heureSoutenance}</div>
+            </div>
+            <div>
+              <div style={styles.cardTitle}>SALLE</div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: '#1e293b' }}>{data.salleSoutenance || "À confirmer"}</div>
+            </div>
+            <div>
+              <button 
+                style={{...styles.secondaryButton, padding: '8px 16px', fontSize: 13}}
+                onClick={() => onNavigate('resultats')}
+              >
+                Voir les détails complets
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* PROGRESS SECTION */}
       <div style={styles.mainSection}>
