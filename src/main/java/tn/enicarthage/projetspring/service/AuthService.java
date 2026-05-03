@@ -11,14 +11,15 @@ import tn.enicarthage.projetspring.dto.AuthResponse;
 import tn.enicarthage.projetspring.dto.LoginRequest;
 import tn.enicarthage.projetspring.dto.RegisterRequest;
 import tn.enicarthage.projetspring.entity.Etudiant;
+import tn.enicarthage.projetspring.entity.Professeur;
 import tn.enicarthage.projetspring.entity.Role;
 import tn.enicarthage.projetspring.entity.StatutCompte;
 import tn.enicarthage.projetspring.entity.User;
 import tn.enicarthage.projetspring.repository.EtudiantRepository;
+import tn.enicarthage.projetspring.repository.ProfesseurRepository;
 import tn.enicarthage.projetspring.repository.UserRepository;
 import tn.enicarthage.projetspring.security.JwtUtil;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,10 +27,16 @@ import java.util.UUID;
 public class AuthService {
 
     @Autowired
+    private jakarta.persistence.EntityManager entityManager;
+
+    @Autowired
     private UserRepository userRepository;
 
     @Autowired
     private EtudiantRepository etudiantRepository;
+
+    @Autowired
+    private ProfesseurRepository professeurRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -51,7 +58,6 @@ public class AuthService {
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
-
 
     public String demanderReinitialisationMotDePasse(String email) {
         User user = userRepository.findByEmail(email)
@@ -91,7 +97,6 @@ public class AuthService {
         return "Mot de passe réinitialisé avec succès !";
     }
 
-
     private static final List<String> MOTS_INTERDITS = List.of(
             "admin", "test", "null", "undefined", "root", "user",
             "chat", "chien", "lapin", "cheval", "vache", "mouton",
@@ -109,7 +114,6 @@ public class AuthService {
             throw new RuntimeException("Le " + champ + " est trop court");
         }
     }
-    // ─── Register ────────────────────────────────────────────────────
 
     @Transactional(rollbackFor = Exception.class)
     public String register(RegisterRequest request) {
@@ -118,7 +122,6 @@ public class AuthService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email déjà utilisé");
         }
-
 
         String token = UUID.randomUUID().toString();
 
@@ -144,8 +147,6 @@ public class AuthService {
 
         return "Votre demande a été envoyée. En attente de validation du chef de département.";
     }
-
-    // ─── Confirmer compte (Chef clique sur le lien) ───────────────────
 
     @Transactional
     public String confirmerCompte(String token, String action) {
@@ -176,6 +177,13 @@ public class AuthService {
                         user.getId(),
                         "ETU-" + System.currentTimeMillis()
                 );
+            } else if (user.getRole() == Role.ENSEIGNANT) {
+                entityManager.createNativeQuery(
+                                "INSERT INTO professeur (utilisateur_id, departement) VALUES (?, ?)"
+                        )
+                        .setParameter(1, user.getId())
+                        .setParameter(2, "Non défini")
+                        .executeUpdate();
             }
 
             envoyerEmailEtudiant(user, true);
@@ -188,8 +196,6 @@ public class AuthService {
             return "Compte refusé.";
         }
     }
-
-    // ─── Login Enseignant / Chef ──────────────────────────────────────
 
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
@@ -207,8 +213,6 @@ public class AuthService {
         return new AuthResponse(token, user.getRole().name(), user.getNom(), user.getId());
     }
 
-    // ─── Login Etudiant ───────────────────────────────────────────────
-
     public AuthResponse loginEtudiant(LoginRequest request) {
         Etudiant etudiant = etudiantRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("Email ou mot de passe incorrect"));
@@ -225,14 +229,9 @@ public class AuthService {
         return new AuthResponse(token, "ETUDIANT", etudiant.getNom(), etudiant.getId());
     }
 
-    // ─── Helpers email ────────────────────────────────────────────────
-
     private void envoyerEmailChef(User user, String token) {
         String lienApprouver = baseUrl + "/api/auth/confirmer?token=" + token + "&action=APPROUVE";
         String lienRefuser   = baseUrl + "/api/auth/confirmer?token=" + token + "&action=REFUSE";
-
-        System.out.println(">>> Tentative envoi email à : " + chefEmail);
-        System.out.println(">>> From : " + fromEmail);
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(fromEmail);
