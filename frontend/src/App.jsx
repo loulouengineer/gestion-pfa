@@ -12,14 +12,14 @@ import Binome            from "./Components/Binome";
 import Profiletudiant    from "./Components/Profiletudiant.jsx";
 import DashboardPage     from "./Components/DashboardPage";
 
-import { getSujetsDisponibles, getBinomeActuel, soutenanceApi, professeurApi } from "./api/api";
+import { getSujetsDisponibles, getBinomeActuel, soutenanceApi, professeurApi, etudiantApi, choixSujetApi } from "./api/api";
 
 import Home           from "./Components/Home.jsx";
 import Login          from "./Components/Login.jsx";
 import Register       from "./Components/Register.jsx";
 import ForgetPassword from "./Components/ForgetPassword.jsx";
 import ResetPassword  from "./Components/ResetPassword.jsx";
-import DashboardChef  from "./Components/DasheboardChef.jsx";
+import DashboardChef  from "./Components/DashboardChef.jsx";
 import ProfApp        from "./Components/ProfApp.jsx";
 
 import "./App.css";
@@ -117,16 +117,34 @@ function DashboardEtudiant() {
 
   const userId   = localStorage.getItem("userId");
   const userName = localStorage.getItem("userName") || "Étudiant";
-  const etudiant = {
+  const [etudiant, setEtudiant] = useState({
     id: userId, nom: userName,
     matricule: localStorage.getItem("matricule") || "",
     moyenne:   parseFloat(localStorage.getItem("moyenne")) || 0,
-  };
+  });
 
   useEffect(() => {
+    // Fetch profile (for moyenne)
+    etudiantApi.getProfil()
+      .then(r => {
+        setEtudiant(prev => ({ ...prev, moyenne: r.moyenne }));
+        localStorage.setItem("moyenne", r.moyenne);
+      })
+      .catch(err => console.error("Erreur profil:", err));
+
+    // Fetch total subjects
     getSujetsDisponibles().then(r => setTotalSujets(r.data.length)).catch(() => {});
+
+    // Fetch binome and choices
     getBinomeActuel(userId)
-      .then(r => setBinome(r.data))
+      .then(r => {
+        setBinome(r.data);
+        if (r.data && r.data.id) {
+          choixSujetApi.getParBinome(r.data.id)
+            .then(res => setChoixActuels(res.data))
+            .catch(err => console.error("Erreur choix:", err));
+        }
+      })
       .catch(err => { if (err.response?.status !== 404) console.error(err); });
   }, [userId]);
 

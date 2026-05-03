@@ -9,6 +9,11 @@ export const authApi = {
   register:      (data)             => api.post('/auth/register',        data),
 };
 
+export const adminApi = {
+  getPendingUsers: () => api.get('/admin/users/pending').then(r => r.data),
+  validateUser:    (id, approuve) => api.post(`/admin/users/${id}/validate`, null, { params: { approuve } }).then(r => r.data),
+};
+
 /* ══════════════════════════════════════════════════
    SUJETS
 ══════════════════════════════════════════════════ */
@@ -68,6 +73,13 @@ export const reordonnerChoix  = (binomeId, ordreIds) => api.put(`/choix/${binome
 export const choixSujetApi = {
   soumettre:    (binomeId, sujetIds) => api.post('/choix', { binomeId, sujetIds }),
   getParBinome: (binomeId) => api.get(`/choix/binome/${binomeId}`),
+};
+
+/* ══════════════════════════════════════════════════
+   ÉTUDIANTS
+══════════════════════════════════════════════════ */
+export const etudiantApi = {
+  getProfil: () => api.get('/etudiants/profil').then(r => r.data),
 };
 
 /* ══════════════════════════════════════════════════

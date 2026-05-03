@@ -151,13 +151,26 @@ public class AuthService {
     public String confirmerCompte(String token, String action) {
         User user = userRepository.findByTokenConfirmation(token)
                 .orElseThrow(() -> new RuntimeException("Token invalide ou expiré"));
+        return validerUserInternal(user, action.equalsIgnoreCase("APPROUVE"));
+    }
 
-        if (action.equalsIgnoreCase("APPROUVE")) {
+    public List<User> getPendingUsers() {
+        return userRepository.findByStatut(StatutCompte.EN_ATTENTE);
+    }
+
+    @Transactional
+    public String validerUserParId(Long userId, boolean approuve) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+        return validerUserInternal(user, approuve);
+    }
+
+    private String validerUserInternal(User user, boolean approuve) {
+        if (approuve) {
             user.setStatut(StatutCompte.APPROUVE);
             user.setTokenConfirmation(null);
             userRepository.save(user);
 
-            // Si étudiant → insérer dans la table etudiant via SQL natif
             if (user.getRole() == Role.ETUDIANT) {
                 etudiantRepository.creerEtudiantDepuisUser(
                         user.getId(),
@@ -167,16 +180,12 @@ public class AuthService {
 
             envoyerEmailEtudiant(user, true);
             return "Compte approuvé avec succès !";
-
-        } else if (action.equalsIgnoreCase("REFUSE")) {
+        } else {
             user.setStatut(StatutCompte.REFUSE);
             user.setTokenConfirmation(null);
             userRepository.save(user);
             envoyerEmailEtudiant(user, false);
             return "Compte refusé.";
-
-        } else {
-            throw new RuntimeException("Action invalide. Utilisez APPROUVE ou REFUSE.");
         }
     }
 

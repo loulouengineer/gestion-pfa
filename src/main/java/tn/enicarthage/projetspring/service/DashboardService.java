@@ -89,6 +89,24 @@ public class DashboardService {
         String statutGlobal = "En cours";
         String statutGlobalSub = "Phase 2 : Sélection des sujets";
 
+        // Check if choices are submitted if no subject is validated yet
+        if (binome != null && (soutenance == null || soutenance.getSujet() == null)) {
+            Long countChoix = (Long) entityManager.createQuery(
+                            "SELECT COUNT(c) FROM ChoixSujet c WHERE c.binome.id = :binomeId")
+                    .setParameter("binomeId", binome.getId())
+                    .getSingleResult();
+            if (countChoix > 0) {
+                sujetStatus = "Vœux soumis";
+                sujetStatusSub = countChoix + " sujets sélectionnés";
+                progressPercentage = 45; // Incremental progress
+                statutGlobalSub = "Phase 2 : En attente d'affectation";
+            }
+        }
+
+        String dateSoutenance = null;
+        String heureSoutenance = null;
+        String salleSoutenance = null;
+
         if (soutenance != null && soutenance.getSujet() != null) {
             sujetStatus = "Validé";
             sujetStatusSub = soutenance.getSujet().getTitre();
@@ -97,10 +115,14 @@ public class DashboardService {
             statutGlobalSub = "Phase 3 : Préparation du rapport";
 
             if (soutenance.getCreneau() != null) {
-                LocalDateTime dateHeure = LocalDateTime.of(
-                        soutenance.getCreneau().getDate(),
-                        soutenance.getCreneau().getHeureDebut());
-                long days = ChronoUnit.DAYS.between(LocalDateTime.now(), dateHeure);
+                dateSoutenance = soutenance.getCreneau().getDate().toString();
+                heureSoutenance = soutenance.getCreneau().getHeureDebut().toString();
+                salleSoutenance = soutenance.getCreneau().getSalle();
+
+                java.time.LocalDate today = java.time.LocalDate.now();
+                java.time.LocalDate targetDate = soutenance.getCreneau().getDate();
+                long days = java.time.temporal.ChronoUnit.DAYS.between(today, targetDate);
+                
                 joursRestants = (int) days;
                 if (days < 0) {
                     joursRestants = 0;
@@ -108,6 +130,11 @@ public class DashboardService {
                     currentStep = 4;
                     progressPercentage = 100;
                     statutGlobalSub = "Phase 4 : Terminé";
+                } else if (days == 0) {
+                    joursRestants = 0;
+                    joursRestantsSub = "C'est AUJOURD'HUI !";
+                } else {
+                    joursRestantsSub = days + " jours avant le jour J";
                 }
             }
         }
@@ -121,6 +148,9 @@ public class DashboardService {
                 .sujetStatusSub(sujetStatusSub)
                 .joursRestants(joursRestants)
                 .joursRestantsSub(joursRestantsSub)
+                .dateSoutenance(dateSoutenance)
+                .heureSoutenance(heureSoutenance)
+                .salleSoutenance(salleSoutenance)
                 .progressPercentage(progressPercentage)
                 .currentStep(currentStep)
                 .build();
