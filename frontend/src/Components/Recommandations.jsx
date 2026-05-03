@@ -36,6 +36,7 @@ const Recommandation = () => {
       rec.description?.toLowerCase().includes(searchTerm.toLowerCase())
     )
     .sort((a, b) => {
+       console.log('sortBy:', sortBy, 'a.score:', a.score, 'b.score:', b.score, 'a.rangSujet:', a.rangSujet, 'b.rangSujet:', b.rangSujet);
       if (sortBy === 'score') return (b.score || 0) - (a.score || 0);
       return (a.rangSujet || 0) - (b.rangSujet || 0);
     });
@@ -131,6 +132,9 @@ const Recommandation = () => {
                 <div className={`score-badge ${getScoreColor(rec.score)}`}>
                   <span className="score-value">{rec.score}%</span>
                   <span className="score-label">Match</span>
+                </div>
+                 <div style={{fontSize: 11, color: '#64748b'}}>
+                    {sortBy === 'score' ? `Score: ${rec.score}%` : `Rang: #${rec.rangSujet}`}
                 </div>
               </div>
 

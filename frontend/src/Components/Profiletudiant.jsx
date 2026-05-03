@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api from "../api/axios";
 
-export default function Profiletudiant() {
+export default function Profiletudiant({ onMoyenneChange }) {
   const [profil, setProfil] = useState(null);
   const [moyenne, setMoyenne] = useState("");
   const [competences, setCompetences] = useState("");
@@ -42,6 +42,8 @@ export default function Profiletudiant() {
         competences: competences.split(",").map((c) => c.trim()).filter((c) => c),
       });
       setMessage("Profil mis à jour avec succès !");
+      localStorage.setItem("moyenne", parseFloat(moyenne));
+      if (onMoyenneChange) onMoyenneChange(parseFloat(moyenne));
       fetchProfil();
     } catch (err) {
       setError(err.response?.data?.message || "Erreur lors de la mise à jour");

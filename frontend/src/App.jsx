@@ -157,7 +157,10 @@ function DashboardEtudiant() {
       case "sujets":          return <SujetsDisponibles onSelectionner={s => { setNouveauSujet(s); setOnglet("mes-choix"); }} choixActuels={choixActuels} />;
       case "recommandations": return <Recommandations etudiant={etudiant} onSelectionner={s => { setNouveauSujet(s); setOnglet("mes-choix"); }} choixActuels={choixActuels} />;
       case "mes-choix":       return <ChoixSujets etudiantId={userId} nouveauSujet={nouveauSujet} onChoixChange={setChoixActuels} />;
-      case "profil":          return <Profiletudiant />;
+     case "profil": return <Profiletudiant onMoyenneChange={(m) => {
+    setEtudiant(prev => ({ ...prev, moyenne: m }));
+    localStorage.setItem("moyenne", m);
+}} />;
       case "resultats":       return <EtudiantResultats userId={userId} />;
       default:                return null;
     }
