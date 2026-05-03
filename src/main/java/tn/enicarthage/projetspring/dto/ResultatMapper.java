@@ -18,7 +18,7 @@ public class ResultatMapper {
 
         Soutenance s = r.getSoutenance();
         if (s != null) {
-            // salle et dateHeure viennent du créneau dans la nouvelle architecture
+
             if (s.getCreneau() != null) {
                 dto.setSalle(s.getCreneau().getSalle());
                 dto.setDateHeure(LocalDateTime.of(
@@ -29,7 +29,7 @@ public class ResultatMapper {
             if (s.getSujet() != null)
                 dto.setProjetTitre(s.getSujet().getTitre());
 
-            // l'encadrant du sujet = professeur principal du jury
+
             Professeur encadrant = s.getEncadrant();
             if (encadrant != null)
                 dto.setProfesseurNom(encadrant.getNom());

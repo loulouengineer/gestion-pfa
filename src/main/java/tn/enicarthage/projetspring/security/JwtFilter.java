@@ -51,14 +51,14 @@ public class JwtFilter extends OncePerRequestFilter {
                                     userDetails, null, userDetails.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                    System.out.println(">>> Auth set in SecurityContext ✅");
+                    System.out.println(">>> Auth set in SecurityContext ");
 
                 } catch (Exception e) {
                     System.out.println(">>> loadUserByUsername FAILED: " + e.getMessage());
                 }
             }
         } else {
-            System.out.println(">>> No Bearer token found ❌");
+            System.out.println(">>> No Bearer token found ");
         }
 
         filterChain.doFilter(request, response);

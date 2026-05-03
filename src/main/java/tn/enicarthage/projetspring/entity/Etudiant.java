@@ -17,12 +17,12 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 public class Etudiant extends User {
 
-    // ❌ Supprimé : id, nom, email, password → déjà dans User
+
 
     @Column(nullable = false)
     private double moyenne;
 
-    @Column(nullable = true, unique = true) // ← nullable = true
+    @Column(nullable = true, unique = true)
     private String matricule;
 
     @Builder.Default
@@ -48,6 +48,4 @@ public class Etudiant extends User {
     @Column(name = "competence")
     private List<String> competences;
 
-    // ❌ Tous les getters/setters manuels supprimés → gérés par @Getter @Setter
-    // ❌ getMatricule() supprimé → s'appelait elle-même infiniment
 }

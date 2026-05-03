@@ -10,8 +10,8 @@ public class SujetDTO {
     public int difficulte;
     public boolean disponible;
     public boolean confirme;
-    public String statut;            // EN_ATTENTE | APPROUVE | REFUSE
-    public String professeur;        // nom affiché dans le front
+    public String statut;
+    public String professeur;
     public List<String> technologies;
     public List<String> motsCles;
     public List<String> competences;

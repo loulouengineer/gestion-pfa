@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@PrimaryKeyJoinColumn(name = "utilisateur_id")  // ✅ valide maintenant car User a @Inheritance JOINED
+@PrimaryKeyJoinColumn(name = "utilisateur_id")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

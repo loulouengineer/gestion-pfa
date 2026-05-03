@@ -28,5 +28,5 @@ public class ChoixSujet {
     private Sujet sujet;
 
     @Column(nullable = false)
-    private int ordre; // 1 à 5
+    private int ordre;
 }

@@ -31,7 +31,6 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
-    // 🆕 Ajouts pour validation chef de département
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private StatutCompte statut = StatutCompte.EN_ATTENTE;

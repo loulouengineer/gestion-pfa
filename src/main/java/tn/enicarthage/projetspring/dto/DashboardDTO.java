@@ -17,7 +17,7 @@ public class DashboardDTO {
     private int progressPercentage;
     private int currentStep;
 
-    // Add these:
+
     private String dateSoutenance;
     private String heureSoutenance;
     private String salleSoutenance;

@@ -16,8 +16,10 @@ public interface EtudiantRepository extends JpaRepository<Etudiant, Long> {
     boolean existsByEmail(String email);
 
     List<Etudiant> findAllByOrderByMoyenneDesc();
-
+    @Query("SELECT e FROM Etudiant e WHERE e.tokenConfirmation = :token")
+    Optional<Etudiant> findByTokenConfirmation(@Param("token") String token);// ←
     List<Etudiant> findByNomContainingIgnoreCaseOrMatriculeContainingIgnoreCase(String nom, String matricule);
+
 
     //chayma
     Optional<Etudiant> findByMatricule(String matricule);
@@ -37,5 +39,7 @@ public interface EtudiantRepository extends JpaRepository<Etudiant, Long> {
             nativeQuery = true)
     void creerEtudiantDepuisUser(@Param("userId") Long userId,
                                  @Param("matricule") String matricule);
+
+
 
 }

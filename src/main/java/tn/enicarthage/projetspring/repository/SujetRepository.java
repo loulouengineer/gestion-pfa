@@ -10,7 +10,7 @@ import java.util.List;
 
 @Repository
 public interface SujetRepository extends JpaRepository<Sujet, Long> {
-    // ✅ findByEncadrant au lieu de findByEnseignant
+
     List<Sujet> findByEncadrant(Professeur encadrant);
     List<Sujet> findByStatut(StatutSujet statut);
     List<Sujet> findByStatutOrderByRangAsc(StatutSujet statut);
@@ -18,5 +18,5 @@ public interface SujetRepository extends JpaRepository<Sujet, Long> {
     List<Sujet> findByConfirmeTrue();
     List<Sujet> findByEncadrantId(Long professeurId);
 
-    // ❌ Supprimé : import User et findByEnseignant — remplacé par Professeur/encadrant
+
 }

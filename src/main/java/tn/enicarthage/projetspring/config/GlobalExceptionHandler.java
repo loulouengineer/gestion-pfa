@@ -15,7 +15,7 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // ── Validation @Valid failures → 400 ─────────────────────────────────────
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidationErrors(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
@@ -26,28 +26,26 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(errors);
     }
 
-    // ── Business logic: not found / bad arg → 400 ────────────────────────────
+
     @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
     public ResponseEntity<Map<String, String>> handleBusinessError(RuntimeException ex) {
         ex.printStackTrace();
         return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
     }
 
-    // ── Authentication failures → 401 ─────────────────────────────────────────
+
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<Map<String, String>> handleAuthError(AuthenticationException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(Map.of("message", ex.getMessage()));
     }
 
-    // ── Role access denied → 403 ─────────────────────────────────────────────
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, String>> handleAccessDenied(AccessDeniedException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(Map.of("message", "Accès refusé pour votre rôle."));
     }
 
-    // ── All other runtime exceptions → 500 (not 400!) ─────────────────────────
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handleUnexpected(RuntimeException ex) {
         ex.printStackTrace();

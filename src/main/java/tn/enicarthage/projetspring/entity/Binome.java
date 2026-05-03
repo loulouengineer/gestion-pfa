@@ -37,7 +37,7 @@ public class Binome {
 
     @Builder
     public Binome(Etudiant etudiant1, Etudiant etudiant2) {
-        if (etudiant1 == null || etudiant2 == null) { // ✅ garde-fou
+        if (etudiant1 == null || etudiant2 == null) {
             throw new IllegalArgumentException("Un binôme doit avoir deux étudiants.");
         }
         this.etudiant1 = etudiant1;
@@ -47,7 +47,7 @@ public class Binome {
     }
 
     public void calculerMoyenne() {
-        // ✅ suppression du cas solo
+
         this.moyenneBinome = (etudiant1.getMoyenne() + etudiant2.getMoyenne()) / 2f;
     }
 }

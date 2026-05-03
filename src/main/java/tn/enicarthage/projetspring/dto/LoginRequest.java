@@ -4,7 +4,7 @@ import lombok.Data;
 @Data
 public class LoginRequest {
     private String nom;
-    private String prenom;  // ← must match the JSON key exactly
+    private String prenom;
     private String email;
     private String password;
 }

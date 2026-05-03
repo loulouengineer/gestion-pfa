@@ -21,6 +21,7 @@ import tn.enicarthage.projetspring.repository.UserRepository;
 import tn.enicarthage.projetspring.security.JwtUtil;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -60,40 +61,62 @@ public class AuthService {
     private String frontendUrl;
 
     public String demanderReinitialisationMotDePasse(String email) {
-        User user = userRepository.findByEmail(email)
+        // Cherche d'abord dans User (admins, enseignants)
+        Optional<User> userOpt = userRepository.findByEmail(email);
+
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            String token = UUID.randomUUID().toString();
+            user.setTokenConfirmation(token);
+            userRepository.save(user);
+            envoyerEmailReinit(user.getNom(), user.getEmail(), token);
+            return "Un email de réinitialisation a été envoyé.";
+        }
+
+        // Cherche ensuite dans Etudiant
+        Etudiant etudiant = etudiantRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Aucun compte trouvé avec cet email"));
 
         String token = UUID.randomUUID().toString();
-        user.setTokenConfirmation(token);
-        userRepository.save(user);
-
-        String lien = frontendUrl + "/reinitialiser-mdp?token=" + token;
-
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(fromEmail);
-        message.setTo(user.getEmail());
-        message.setSubject("Réinitialisation de votre mot de passe");
-        message.setText(
-                "Bonjour " + user.getNom() + ",\n\n" +
-                        "Cliquez sur le lien suivant pour réinitialiser votre mot de passe :\n\n" +
-                        lien + "\n\n" +
-                        "Ce lien est valable une seule fois.\n\n" +
-                        "Si vous n'avez pas fait cette demande, ignorez cet email.\n\n" +
-                        "Cordialement."
-        );
-        mailSender.send(message);
-
+        etudiant.setTokenConfirmation(token); // ← vérifiez que ce champ existe dans Etudiant
+        etudiantRepository.save(etudiant);
+        envoyerEmailReinit(etudiant.getNom(), etudiant.getEmail(), token);
         return "Un email de réinitialisation a été envoyé.";
     }
 
+    private void envoyerEmailReinit(String nom, String email, String token) {
+        String lien = frontendUrl + "/reinitialiser-mdp?token=" + token;
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(email);
+        message.setSubject("Réinitialisation de votre mot de passe");
+        message.setText(
+                "Bonjour " + nom + ",\n\n" +
+                        "Cliquez sur ce lien pour réinitialiser votre mot de passe :\n\n" +
+                        lien + "\n\n" +
+                        "Ce lien est valable une seule fois.\n\n" +
+                        "Cordialement."
+        );
+        mailSender.send(message);
+    }
+
     public String reinitialiserMotDePasse(String token, String nouveauMotDePasse) {
-        User user = userRepository.findByTokenConfirmation(token)
+        // Cherche dans User
+        Optional<User> userOpt = userRepository.findByTokenConfirmation(token);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            user.setPassword(passwordEncoder.encode(nouveauMotDePasse));
+            user.setTokenConfirmation(null);
+            userRepository.save(user);
+            return "Mot de passe réinitialisé avec succès !";
+        }
+
+        // Cherche dans Etudiant
+        Etudiant etudiant = etudiantRepository.findByTokenConfirmation(token)
                 .orElseThrow(() -> new RuntimeException("Token invalide ou expiré"));
-
-        user.setPassword(passwordEncoder.encode(nouveauMotDePasse));
-        user.setTokenConfirmation(null);
-        userRepository.save(user);
-
+        etudiant.setPassword(passwordEncoder.encode(nouveauMotDePasse));
+        etudiant.setTokenConfirmation(null);
+        etudiantRepository.save(etudiant);
         return "Mot de passe réinitialisé avec succès !";
     }
 
@@ -124,7 +147,6 @@ public class AuthService {
         }
 
         String token = UUID.randomUUID().toString();
-
         User user = new User();
         user.setNom(request.getNom());
         user.setPrenom(request.getPrenom());
@@ -136,6 +158,7 @@ public class AuthService {
 
         userRepository.save(user);
         System.out.println(">>> User sauvegardé, appel envoyerEmailChef...");
+
 
         try {
             envoyerEmailChef(user, token);
@@ -231,7 +254,7 @@ public class AuthService {
 
     private void envoyerEmailChef(User user, String token) {
         String lienApprouver = baseUrl + "/api/auth/confirmer?token=" + token + "&action=APPROUVE";
-        String lienRefuser   = baseUrl + "/api/auth/confirmer?token=" + token + "&action=REFUSE";
+        String lienRefuser = baseUrl + "/api/auth/confirmer?token=" + token + "&action=REFUSE";
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(fromEmail);

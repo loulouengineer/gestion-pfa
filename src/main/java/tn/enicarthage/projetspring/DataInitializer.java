@@ -33,7 +33,7 @@ public class DataInitializer {
                 chef.setRole(Role.CHEF_DEPT);
                 chef.setStatut(StatutCompte.APPROUVE);
                 userRepository.save(chef);
-                System.out.println("✅ Chef département créé : chef@enicar.ucar.tn / chef1234");
+                System.out.println(" Chef département créé : chef@enicar.ucar.tn / chef1234");
             }
         };
     }
@@ -94,7 +94,7 @@ public class DataInitializer {
                                             c.setStatut(StatutCreneau.OCCUPE);
                                             creneauRepository.save(c);
                                             soutenanceRepository.save(s);
-                                            System.out.println("   ✅ Soutenance scheduled on " + c.getDate());
+                                            System.out.println("    Soutenance scheduled on " + c.getDate());
                                         });
                                 }
                             }
@@ -102,13 +102,13 @@ public class DataInitializer {
                 });
             });
 
-            // Skip si les données de test spécifiques existent déjà
+
             if (etudiantRepository.existsByEmail("y.bensalah@etu.enicar.tn")) {
-                System.out.println("ℹ️  Données de test déjà présentes — initialisation ignorée.");
+                System.out.println("ℹ  Données de test déjà présentes — initialisation ignorée.");
                 return;
             }
 
-            System.out.println("🚀 Initialisation des données de test…");
+            System.out.println(" Initialisation des données de test…");
 
             // ════════════════════════════════════════════════════════════════
             // 1. PROFESSEURS
@@ -326,7 +326,7 @@ public class DataInitializer {
 
             System.out.println("  ✔ 3 résultats enregistrés");
 
-            System.out.println("✅ Initialisation terminée avec succès !");
+            System.out.println(" Initialisation terminée avec succès !");
             System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             System.out.println("  COMPTES DE TEST");
             System.out.println("  Chef dept    : chef@enicar.ucar.tn           / chef1234");

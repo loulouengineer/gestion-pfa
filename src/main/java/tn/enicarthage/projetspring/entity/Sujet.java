@@ -56,7 +56,7 @@ public class Sujet {
 
     private LocalDate dateProposition;
 
-    // ✅ Un seul champ — Professeur étend User, donc encadrant couvre les deux
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "enseignant_id")
     private Professeur encadrant;
@@ -64,12 +64,9 @@ public class Sujet {
         return technologie;
     }
 
-    // ❌ Supprimé : private User enseignant — redondant avec encadrant
-    // ❌ Supprimé : tous les getters/setters manuels — gérés par @Data
-    // ❌ Supprimé : getTechnologies() qui appelait getTechnologie() — choisir un seul nom
 
-    // Si tu as besoin d'accéder à encadrant comme User dans ton code :
+
     public User getEnseignant() {
-        return encadrant; // Professeur IS-A User grâce à l'héritage
+        return encadrant;
     }
 }

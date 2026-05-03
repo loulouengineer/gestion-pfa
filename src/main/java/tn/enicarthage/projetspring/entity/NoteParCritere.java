@@ -19,9 +19,8 @@ public class NoteParCritere {
     @JoinColumn(name = "resultat_id")
     private Resultat resultat;
 
-    // Nom du critère : "Présentation orale", "Rapport écrit", etc.
+
     private String critere;
 
-    // Note sur 20
     private Double note;
 }
