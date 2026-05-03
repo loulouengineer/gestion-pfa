@@ -1,6 +1,5 @@
 package tn.enicarthage.projetspring.dto;
 
-
 import lombok.Builder;
 import lombok.Data;
 
@@ -17,4 +16,9 @@ public class DashboardDTO {
     private String joursRestantsSub;
     private int progressPercentage;
     private int currentStep;
+
+    // Add these:
+    private String dateSoutenance;
+    private String heureSoutenance;
+    private String salleSoutenance;
 }
