@@ -60,6 +60,12 @@ public class Soutenance {
         PLANIFIEE, EN_COURS, TERMINEE, ANNULEE
     }
 
+    @PrePersist
+    public void prePersist() {
+        if (statut == null) statut = StatutSoutenance.PLANIFIEE;
+        if (jury == null) jury = new ArrayList<>();
+    }
+
     public boolean encadrantDansJury() {
         if (affectation == null || affectation.getSujet() == null) return false;
         Professeur encadrant = affectation.getSujet().getEncadrant();

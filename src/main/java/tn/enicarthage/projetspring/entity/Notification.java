@@ -44,6 +44,12 @@ public class Notification {
     @JoinColumn(name = "soutenance_id")
     private Soutenance soutenance;
 
+    @PrePersist
+    public void prePersist() {
+        if (dateCreation == null) dateCreation = LocalDateTime.now();
+        if (type == null) type = TypeNotification.INFO;
+    }
+
     public enum TypeNotification {
         INFO, DEBUT_SOUTENANCE, FIN_SOUTENANCE, RAPPORT, AVERTISSEMENT
     }

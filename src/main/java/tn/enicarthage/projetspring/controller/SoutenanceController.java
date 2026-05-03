@@ -179,6 +179,7 @@ public class SoutenanceController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> annuler(@PathVariable Long id) {
         soutenanceRepository.findById(id).ifPresent(s -> {
+            notificationRepository.deleteAll(notificationRepository.findBySoutenanceId(id));
             if (s.getCreneau() != null) {
                 s.getCreneau().setStatut(StatutCreneau.DISPONIBLE);
                 creneauRepository.save(s.getCreneau());
@@ -191,7 +192,7 @@ public class SoutenanceController {
     private Map<String, Object> toMap(Soutenance s) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("id", s.getId());
-        map.put("statut", s.getStatut().name());
+        map.put("statut", s.getStatut() != null ? s.getStatut().name() : "PLANIFIEE");
         map.put("note", s.getNote());
         map.put("observations", s.getObservations());
         map.put("present", s.getPresent());

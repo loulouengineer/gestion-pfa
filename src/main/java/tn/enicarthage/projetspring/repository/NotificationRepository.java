@@ -9,6 +9,8 @@ import java.util.List;
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
 
+    List<Notification> findBySoutenanceId(Long soutenanceId);
+
     List<Notification> findByDestinataireIdOrderByDateCreationDesc(Long destinataireId);
 
     List<Notification> findByDestinataireIdAndLueFalse(Long destinataireId);
